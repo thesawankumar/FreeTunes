@@ -150,7 +150,6 @@ async def verify_otp(request: VerifyOtpRequest, response: Response):
             }
         }
     
-
     except Exception as e:
         print(f"Error while verifying OTP: {e}")
         raise HTTPException(status_code=500, detail={"verified":False, "message":"Internal Server Error"})

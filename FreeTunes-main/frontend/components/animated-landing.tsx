@@ -42,7 +42,6 @@ export default function AnimatedLanding() {
   const [showPlayer, setShowPlayer] = useState(false);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false)
   const [songData, setSongData] = useState(null)
-  const videoRef = useRef(null)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -51,34 +50,34 @@ export default function AnimatedLanding() {
   const socketRef = useRef<WebSocket | null>(null)
   const [isHlsReady, setIsHlsReady] = useState(false);
 
-  const verifyToken = async (token) => {
-    try{
-      const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
-        method : "POST", 
-        headers : {
-          "Content-Type" : "application/json"
-        }, 
-        body : JSON.stringify({access_token:token})
-      })
+  // const verifyToken = async (token) => {
+  //   try{
+  //     const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
+  //       method : "POST", 
+  //       headers : {
+  //         "Content-Type" : "application/json"
+  //       }, 
+  //       body : JSON.stringify({access_token:token})
+  //     })
 
-      const data = await response.json()
+  //     const data = await response.json()
 
-      if(response.ok && data.auth){
-        localStorage.setItem("user", JSON.stringify(data.user))
-        router.push("/dashboard")
-      } else {
-      }
-    } catch {
+  //     if(response.ok && data.auth){
+  //       localStorage.setItem("user", JSON.stringify(data.user))
+  //       router.push("/dashboard")
+  //     } else {
+  //     }
+  //   } catch {
 
-    }
-  }
+  //   }
+  // }
 
-  useEffect(()=>{
-      const token = Cookies.get("access_token")
-      if(token){
-        verifyToken(token)
-      }
-    }, [])
+  // useEffect(()=>{
+  //     const token = Cookies.get("access_token")
+  //     if(token){
+  //       verifyToken(token)
+  //     }
+  //   }, [])
 
   const Loader = () => (
     <motion.div

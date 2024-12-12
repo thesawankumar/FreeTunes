@@ -5,6 +5,8 @@ FreeTunes-main/backend/client.env
 
 # Ignore node_modules directory
 FreeTunes-main/frontend/node_modules/
+FreeTunes-main/backend/mp3
+FreeTunes-main/backend/hls
 
 
 # Ignore .next build files (Next.js build output)
