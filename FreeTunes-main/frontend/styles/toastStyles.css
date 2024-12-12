@@ -1,0 +1,21 @@
+/* toastStyles.css */
+.Toastify__toast {
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Drop shadow */
+    font-family: 'Arial', sans-serif; /* Font style */
+}
+
+.Toastify__toast--success {
+    background: linear-gradient(90deg, rgb(163, 29, 216) 0%, rgba(99, 102, 241, 1) 100%); /* Blue gradient */
+    color: white; /* Text color */
+}
+
+.Toastify__toast--error {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 1) 0%, rgba(239, 68, 68, 1) 100%); /* Red gradient */
+    color: white; /* Text color */
+}
+
+.Toastify__toast--info {
+    background: linear-gradient(90deg, rgb(193, 59, 246) 0%, rgb(102, 4, 167) 100%); /* Light blue gradient */
+    color: white; /* Text color */
+}

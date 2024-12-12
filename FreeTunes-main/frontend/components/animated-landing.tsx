@@ -10,6 +10,8 @@ import { siteConfig } from "@/config/site";
 import Hls from "hls.js"
 import 'react-h5-audio-player/lib/styles.css'
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
 const MotionLink = motion(Link);
 
@@ -32,6 +34,7 @@ const FeatureCard = ({ feature, icon: Icon, delay }) => (
 );
 
 export default function AnimatedLanding() {
+  const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("")
   const [m3u8Url, setM3u8Url] = useState(""); 
@@ -47,6 +50,35 @@ export default function AnimatedLanding() {
   const hlsRef = useRef<Hls | null>(null);
   const socketRef = useRef<WebSocket | null>(null)
   const [isHlsReady, setIsHlsReady] = useState(false);
+
+  const verifyToken = async (token) => {
+    try{
+      const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
+        method : "POST", 
+        headers : {
+          "Content-Type" : "application/json"
+        }, 
+        body : JSON.stringify({access_token:token})
+      })
+
+      const data = await response.json()
+
+      if(response.ok && data.auth){
+        localStorage.setItem("user", JSON.stringify(data.user))
+        router.push("/dashboard")
+      } else {
+      }
+    } catch {
+
+    }
+  }
+
+  useEffect(()=>{
+      const token = Cookies.get("access_token")
+      if(token){
+        verifyToken(token)
+      }
+    }, [])
 
   const Loader = () => (
     <motion.div
@@ -325,6 +357,12 @@ export default function AnimatedLanding() {
         {isLoading && !songData && <Loader />}
 
         {/* Login and Sign Up Buttons */}
+        <motion.div 
+            className="flex gap-6 mt-8"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
         <div className="flex gap-6 mt-8">
             <button 
               className="flex items-center bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold px-8 py-4 rounded-full hover:scale-105 transition-all"
@@ -337,6 +375,7 @@ export default function AnimatedLanding() {
               Sign Up
             </button>
           </div>
+          </motion.div>
         </section>
       </div>
     </div>

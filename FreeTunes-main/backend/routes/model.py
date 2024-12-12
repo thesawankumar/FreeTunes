@@ -13,7 +13,8 @@ import os
 from models.model import user, playlist
 from dbconfig import db
 from pymongo.errors import PyMongoError
-
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 dotenv_path = Path('./client.env')
 load_dotenv(dotenv_path=dotenv_path)
@@ -53,6 +54,8 @@ class VerifyOtpRequest(BaseModel):
     email: EmailStr
     otp: str
 
+class TokenRequest(BaseModel):
+    access_token: str
 
 def send_email(email: str, otp: str):
     try:
@@ -92,21 +95,21 @@ async def generate_otp(request: OtpRequest, background_tasks: BackgroundTasks):
             )
         except PyMongoError as e:
             print(f"MongoDB error while updating OTP for {email}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Database error while saving OTP.")        
+            raise HTTPException(status_code=500, detail={"generated":False})        
         
 
         updated_document = await db["otps"].find_one({"email": email})
 
         if updated_document["otp"] != otp or updated_document["expiry"] != expiry_time:
             print(f"Failed to update or insert OTP entry for {email}.")
-            raise HTTPException(status_code=500, detail="Error saving OTP.")
+            raise HTTPException(status_code=500, detail={"generated":False})
 
         send_email(email, otp)
-        return {"message": "OTP generated and sent to the provided email address."}
+        return {"generated": True}
 
     except Exception as e:
         print(f"Error while generating OTP: {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while generating the OTP.")
+        raise HTTPException(status_code=500, detail={"generated":False})
 
 @model_router.post("/verify/otp")
 async def verify_otp(request: VerifyOtpRequest, response: Response):
@@ -116,33 +119,26 @@ async def verify_otp(request: VerifyOtpRequest, response: Response):
         
         otp_entry = await db["otps"].find_one({"email": email})
         if not otp_entry:
-            raise HTTPException(status_code=404, detail="OTP not found for the provided email.")
+            raise HTTPException(status_code=404, detail={"verified":False, "message":"OTP not found for the provided email."})
         
         if otp_entry["otp"] != otp:
-            raise HTTPException(status_code=400, detail="Invalid OTP.")
+            raise HTTPException(status_code=400, detail={"verified":False, "message":"Invalid OTP."})
         
         if otp_entry["expiry"] < datetime.utcnow():
-            raise HTTPException(status_code=400, detail="OTP has expired.")
+            raise HTTPException(status_code=400, detail={"verified":False, "message": "OTP has expired."})
         
         user = await db["users"].find_one({"email": email})
         if not user:
-            raise HTTPException(status_code=404, detail="User not found.")
+            raise HTTPException(status_code=404, detail={"verified":False, "message":"User not found"})
 
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         token_data = {"user_id": str(user["_id"]), "email": email}
         token = create_access_token(data=token_data, expires_delta=access_token_expires)
 
-        response.set_cookie(
-            key="access_token",
-            value=token,
-            httponly=True,
-            secure=True,
-            samesite="Lax",
-        )
-        
         await db["otps"].delete_one({"email": email})
 
         return {
+            "verified" : True,
             "message": "OTP verified successfully.",
             "access_token": token,
             "user": {
@@ -157,10 +153,46 @@ async def verify_otp(request: VerifyOtpRequest, response: Response):
 
     except Exception as e:
         print(f"Error while verifying OTP: {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while verifying the OTP.")
+        raise HTTPException(status_code=500, detail={"verified":False, "message":"Internal Server Error"})
 
-@model_router.post("/create/user", response_model=user)
-async def create_user(item: user, response: Response):
+#verify otp for new user
+@model_router.post("/verify/otp-new")
+async def verify_otp_new(request: VerifyOtpRequest, response: Response):
+    try:
+        email = request.email
+        otp = request.otp
+        print(email)
+        print(otp)
+        otp_entry = await db["otps"].find_one({"email": email})
+
+        if not otp_entry:
+            print('check 1')
+            raise HTTPException(status_code=404, detail={"verified":False, "message":"OTP not found for the provided email."})
+        
+        if otp_entry["otp"] != otp:
+            print('check 2')
+            raise HTTPException(status_code=400, detail={"verified":False, "message":"Invalid OTP."})
+        
+        if otp_entry["expiry"] < datetime.utcnow():
+            print('check 3')
+            raise HTTPException(status_code=400, detail={"verified":False, "message": "OTP has expired."})
+        
+        await db["otps"].delete_one({"email": email})
+
+        return {
+            "verified" : True,
+            "message": "OTP verified successfully."
+        }
+    
+
+    except Exception as e:
+        print(f"Error while verifying OTP: {e}")
+        raise HTTPException(status_code=500, detail={"verified":False, "message":"Internal Server Error"})
+
+
+
+@model_router.post("/create/user")
+async def create_user(item: user, request: Request):
     try:
         print('Attempting to create a new item...')
 
@@ -168,7 +200,7 @@ async def create_user(item: user, response: Response):
         existing_user = await db["users"].find_one({"email": item.email})
         if existing_user:
             print(f"User with email {item.email} already exists.")
-            raise HTTPException(status_code=400, detail="A user with this email already exists.")
+            raise HTTPException(status_code=400, detail={"status": False, "message": "A user with this email already exists."})
         
         
         item_dict = item.dict(by_alias=True)
@@ -179,51 +211,67 @@ async def create_user(item: user, response: Response):
         token_data = {"user_id": str(result.inserted_id), "email": item.email}
         token = create_access_token(data=token_data, expires_delta=access_token_expires)
         
-        response.set_cookie(
-            key="access_token",
-            value=token,
-            httponly=True,
-            secure=True,
-            samesite="Lax",
-        )
-        
         created_item = await db["users"].find_one({"_id": result.inserted_id})
-        if not created_item:
-            raise HTTPException(status_code=404, detail="Failed to retrieve the created item from the database")
         
-        return created_item
+        if created_item:
+            created_item["_id"] = str(created_item["_id"])
+        
+        if not created_item:
+            raise HTTPException(status_code=404, detail={"status": False, "message": "Failed to retrieve the created item from the database"})
+        
+        return {
+            "status": True,
+            "user": {
+                "id": str(created_item["_id"]),
+                "name": item.name,  # Ensure name is returned
+                "email": item.email,  # Ensure email is returned
+                "playlist": created_item.get("playlist", []),
+                "history": created_item.get("history", []),
+            },
+            "access_token": token
+        }
 
     except Exception as e:
         print(f"Error while creating user: {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while creating the user.")
+        raise HTTPException(status_code=500, detail={"status": False, "message": "An unexpected error occurred while creating the user."})
 
-@model_router.get("/verify/token")
-async def verify_token(request: Request):
+@model_router.post("/verify/token")
+async def verify_token(request: TokenRequest):    
     try:
-        token = request.cookies.get("access_token")
+        token = request.access_token
         if not token:
-            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
+            raise HTTPException(status_code=401, detail={"auth" : False, "message": "Unauthorized: Token not found."})
         
         payload = verify_access_token(token)
         if not payload:
-            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+            raise HTTPException(status_code=401, detail={"auth" : False, "message": "Unauthorized: Invalid or expired token."})
         
         user_id = payload.get("user_id")
         if not user_id:
-            raise HTTPException(status_code=401, detail="Unauthorized: User ID missing in token.")
+            raise HTTPException(status_code=401, detail={"auth" : False, "message": ""})
         
         user_data = await db["users"].find_one({"_id": ObjectId(user_id)})
-        if not user_data:
-            raise HTTPException(status_code=401, detail="Unauthorized: User not found.")
-        
-        return {"message": "Token is valid", "user": user_data}
 
-    except HTTPException as e:
-        raise e
+        if user_data:
+            user_data["_id"] = str(user_data["_id"])
+
+        if not user_data:
+            raise HTTPException(status_code=401, detail={"auth" : False, "message": "Unauthorized: User not found."})
+        
+        return {
+            "auth" : True,
+            "message": "Token is valid", 
+                "user": {
+                "id": str(user_data["_id"]),
+                "name": user_data["name"],  # Ensure name is returned
+                "email": user_data["email"],  # Ensure email is returned
+                "playlist": user_data.get("playlist", []),
+                "history": user_data.get("history", []),
+            }}
 
     except Exception as e:
         print(f"Error while verifying token: {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while verifying the token.")
+        raise HTTPException(status_code=500, detail={"auth" : False, "message": "An unexpected error occurred while verifying the token."})
 
 @model_router.post("/create/playlist", response_model=playlist)
 async def create_playlist(item: playlist, request: Request):
@@ -249,6 +297,8 @@ async def create_playlist(item: playlist, request: Request):
         print(f"Playlist inserted with ID: {result.inserted_id}")
         
         created_playlist = await db["playlists"].find_one({"_id": result.inserted_id})
+        if created_playlist:
+            created_playlist["_id"] = str(created_playlist["_id"])
         if not created_playlist:
             raise HTTPException(status_code=404, detail="Failed to retrieve the created playlist from the database.")
         
@@ -291,6 +341,9 @@ async def update_user(user_id: str, updated_data: user, request: Request):
             raise HTTPException(status_code=404, detail="User not found.")
         
         updated_user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        if updated_user:
+            updated_user["_id"] = str(updated_user["_id"])
+
         if not updated_user:
             raise HTTPException(status_code=404, detail="User not found after update.")
         
@@ -302,7 +355,8 @@ async def update_user(user_id: str, updated_data: user, request: Request):
     except Exception as e:
         print(f"Error while updating user: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the user.")
-    
+
+
 @model_router.put("/update/playlist/{playlist_id}", response_model=playlist)
 async def update_playlist(playlist_id: str, updated_data: playlist, request: Request):
     try:
@@ -340,6 +394,8 @@ async def update_playlist(playlist_id: str, updated_data: playlist, request: Req
             raise HTTPException(status_code=404, detail="Playlist not found.")
         
         updated_playlist = await db["playlists"].find_one({"_id": ObjectId(playlist_id)})
+        if updated_playlist:
+            updated_playlist["_id"] = str(updated_playlist["_id"])
         if not updated_playlist:
             raise HTTPException(status_code=404, detail="Playlist not found after update.")
         
