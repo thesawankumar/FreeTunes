@@ -38,7 +38,7 @@ class user(BaseModel):
 class playlist(BaseModel):
     name : str
     userID: str
-    songs: Optional[List[PlaylistItem]]
+    songs: Optional[List[PlaylistItem]] = [] 
     liked: Optional[bool]
 
     class Config:

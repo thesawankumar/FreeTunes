@@ -12,7 +12,7 @@ import { FaPlay, FaPause, FaArrowLeft, FaArrowRight, FaHeart, FaPlus } from 'rea
 import { MdMusicNote } from 'react-icons/md';
 import Hls from "hls.js";
 import PlusPopup from "@/components/popupCard";
-import { fetchPlaylistNames } from "@/components/utils/popupCardFunctions.ts";
+import { fetchPlaylistNames } from "@/components/utils/popupCardFunctions";
 
 const Dashboard = () => {
   const router = useRouter();
@@ -65,26 +65,67 @@ const Dashboard = () => {
   // const handlePopupCloseAction = () => {
   //   handlePopupClose(setIsPopupVisible);
   // };
-
+  
   const handlePlus = async () => {
     setIsPopupVisible(true);
-
-    const user = JSON.parse(localStorage.getItem("user"));
     const token = Cookies.get("access_token");
-
     if (token) {
-      const playlists = await fetchPlaylistNames(token);
-      setPlaylistNames(playlists);
+      const playlistNames = await fetchPlaylistNames(token);
+      setPlaylistNames(playlistNames);
     }
-  };
-
-  const handlePlaylistSelect = (playlistName) => {
-    toast.success(`Added to ${playlistName}`);
   };
 
   const handlePopupClose = () => {
     setIsPopupVisible(false);
   };
+
+  const handlePlaylistSelect = (playlistName: string) => {
+    console.log(`Selected Playlist: ${playlistName}`);
+  };
+
+  const createPlaylist = async (playlistName: string, songName: string, artistName: string) => {
+    console.log(`Create Playlist: ${playlistName}`);
+    const token = Cookies.get("access_token");
+    console.log(token)
+    const user = JSON.parse(localStorage.getItem("user"));
+  
+    try {
+      const response = await fetch('http://127.0.0.1:7823/model/create/playlist', {
+        method: "POST", 
+        headers: {
+          "Content-Type": "application/json",
+          "authorization": token,
+        },
+        body: JSON.stringify({
+          name: playlistName, 
+          userID: user?.id,  
+          songs: [{
+            songName: songName,
+            artistName: artistName
+          }],
+          liked: false
+        }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Playlist created successfully", data);
+        const playlistNames = await fetchPlaylistNames(token);
+        setPlaylistNames(playlistNames);
+        console.log(playlistNames)
+        return data;
+
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to create playlist", errorData);
+        throw new Error(errorData.message || "Failed to create playlist");
+      }
+    } catch (error) {
+      console.error("Error creating playlist:", error);
+      toast.error("Failed to create playlist.");
+    }
+  };
+  
 
 
   const verifyToken = async (token) => {
@@ -616,10 +657,12 @@ const Dashboard = () => {
 
         {isPopupVisible && (
           <PlusPopup 
-            handlePlus={() => console.log("Plus action handled")} 
-            onClose={handlePopupClose} 
+            onClose={handlePopupClose}
             playlistNames={playlistNames}
-            onPlaylistSelect={onPlaylistSelect}
+            onPlaylistSelect={handlePlaylistSelect}
+            createPlaylist={createPlaylist}
+            songName={songName}  // Pass songName here
+            artistName={artistName}
           />
         )}
         

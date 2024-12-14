@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { FaTimes, FaCheckCircle } from "react-icons/fa";
-import { handlePlaylistClick, handleCreatePlaylist, handleSubmit } from "./utils/playlistHelpers";
+import { handlePlaylistClick, handleSubmit } from "./utils/playlistHelpers"; // Import the functions
+import { handleCreatePlaylist } from "./utils/popupCardFunctions";
 
 interface PlusPopupProps {
   onClose: () => void;
   playlistNames: string[] | null;
   onPlaylistSelect: (playlistName: string) => void;
   createPlaylist: (playlistName: string) => void;
+  songName: string; 
+  artistName: string;
 }
 
 const PlusPopup: React.FC<PlusPopupProps> = ({ 
   onClose, 
   playlistNames, 
   onPlaylistSelect, 
-  createPlaylist 
+  createPlaylist,
+  songName,
+  artistName,
 }) => {
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  const [selectedPlaylists, setSelectedPlaylists] = useState<string[]>([]);
   const [newPlaylistName, setNewPlaylistName] = useState(""); 
   const [showCreateInput, setShowCreateInput] = useState(false); 
 
@@ -47,21 +52,22 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
             {playlistNames?.map((playlist, idx) => (
               <div
                 key={idx}
-                onClick={() => handlePlaylistClick(selectedPlaylist, playlist, setSelectedPlaylist)} // Use the imported function
+                onClick={() => handlePlaylistClick(selectedPlaylists, playlist, setSelectedPlaylists)}
                 className={`flex items-center space-x-4 cursor-pointer p-4 rounded-2xl transition-transform transform hover:bg-indigo-700 hover:scale-105 ${
-                  selectedPlaylist === playlist ? "bg-indigo-600 shadow-lg scale-105" : "bg-transparent"
+                  selectedPlaylists.includes(playlist) ? "bg-indigo-600 shadow-lg scale-105" : "bg-transparent"
                 }`}
               >
                 <div
                   className={`w-7 h-7 rounded-full border-2 border-indigo-500 flex items-center justify-center transition-transform ${
-                    selectedPlaylist === playlist ? "bg-indigo-500" : "bg-transparent"
+                    selectedPlaylists.includes(playlist) ? "bg-indigo-500" : "bg-transparent"
                   }`}
                 >
-                  {selectedPlaylist === playlist && <FaCheckCircle className="text-white w-4 h-4" />}
+                  {selectedPlaylists.includes(playlist) && <FaCheckCircle className="text-white w-4 h-4" />}
                 </div>
                 <span className="text-white text-lg font-semibold">{playlist}</span>
               </div>
             ))}
+
           </div>
         )}
 
@@ -86,7 +92,7 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
               className="w-full p-4 rounded-xl bg-black text-white placeholder-gray-400 focus:outline-none border-2 border-indigo-500 shadow-lg transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl"
             />
             <button
-              onClick={() => handleCreatePlaylist(newPlaylistName, createPlaylist, setNewPlaylistName, setShowCreateInput)} // Use the imported function
+              onClick={() => handleCreatePlaylist(artistName, songName,newPlaylistName, createPlaylist, setNewPlaylistName, setShowCreateInput)} 
               className="mt-4 bg-gradient-to-r from-indigo-500 to-purple-700 text-white px-6 py-2 rounded-2xl hover:bg-gradient-to-l transition-all ease-out duration-300 transform hover:scale-105"
             >
               Create Playlist
@@ -96,7 +102,7 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
 
         <div className="mt-8 flex justify-end">
           <button
-            onClick={() => handleSubmit(selectedPlaylist, "", onClose, onPlaylistSelect)} // Submit without content for now
+            onClick={() => handleSubmit(selectedPlaylists, onClose, songName, artistName)} 
             className="bg-gradient-to-r from-indigo-500 to-purple-700 text-white px-8 py-3 rounded-2xl hover:bg-gradient-to-l transition-all ease-out duration-300 transform hover:scale-105"
           >
             Submit

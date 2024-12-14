@@ -220,7 +220,8 @@ async def create_user(item: user, request: Request):
     try:
         print('Attempting to create a new item...')
 
-    
+        print(item.name)
+        print(item.email)
         existing_user = await db["users"].find_one({"email": item.email})
         if existing_user:
             print(f"User with email {item.email} already exists.")
@@ -238,7 +239,7 @@ async def create_user(item: user, request: Request):
         default_playlist = playlist(
             name="Liked",
             userID=str(result.inserted_id),
-            songs=PlaylistItem(songName="Sample Song", artistName="Sample Artist"),
+            songs=[],
             liked=True
         )
 
@@ -317,7 +318,7 @@ async def verify_token(request: TokenRequest):
 async def create_playlist(item: playlist, request: Request):
     try:
         print('Verifying user for creating a playlist...')
-        token = request.cookies.get("access_token")
+        token = request.headers.get("authorization")
         if not token:
             raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
         
@@ -331,16 +332,25 @@ async def create_playlist(item: playlist, request: Request):
         
         print('Attempting to create a new playlist...')
         playlist_dict = item.dict(by_alias=True)
-        playlist_dict["user_id"] = user_id  # Associate the playlist with the user
         
-        result = await db["playlists"].insert_one(playlist_dict)
+        result = await db["playlist"].insert_one(playlist_dict)
         print(f"Playlist inserted with ID: {result.inserted_id}")
         
-        created_playlist = await db["playlists"].find_one({"_id": result.inserted_id})
+        created_playlist = await db["playlist"].find_one({"_id": result.inserted_id})
         if created_playlist:
             created_playlist["_id"] = str(created_playlist["_id"])
         if not created_playlist:
             raise HTTPException(status_code=404, detail="Failed to retrieve the created playlist from the database.")
+        
+        update_result = await db["users"].update_one(
+            {"_id": ObjectId(user_id)}, 
+            {"$push": {"playlist": str(result.inserted_id)}}
+        )
+
+        print(update_result)
+
+        if update_result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found while updating playlists.")
         
         return created_playlist
 
@@ -525,3 +535,37 @@ async def get_playlist(request : Request):
         print(f"Error fetching playlists: {e}")
         raise HTTPException(status_code=500, detail="Unexpected Error occured while fetching playlists")
     
+
+@model_router.post("/playlist/id")
+async def get_playlist_id(request: Request):
+    try:
+        body = await request.json()
+        playlistName = body.get("playlistName")
+        userID = body.get("userID")
+        token = request.headers.get("authorization")
+
+        if not token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
+        
+        payload = verify_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+        
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: User ID missing in token.")
+        
+        if user_id != userID:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only access your own playlists.")
+        
+        
+        playlist = await db["playlist"].find_one({"name": playlistName, "userID": userID})
+        
+        if not playlist:
+            raise HTTPException(status_code=404, detail="Playlist not found.")
+        
+        return str(playlist["_id"])
+    
+    except Exception as e:
+        print(f"Error while fetching playlist ID: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the playlist ID.")

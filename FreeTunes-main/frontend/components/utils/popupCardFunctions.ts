@@ -12,6 +12,7 @@ export const fetchPlaylistNames = async (token: string) => {
 
     if (response.ok) {
       const data = await response.json();
+      console.log(data)
       return data.map((playlist: { name: string }) => playlist.name);
     } else {
       throw new Error("Failed to fetch playlists");
@@ -23,52 +24,16 @@ export const fetchPlaylistNames = async (token: string) => {
   }
 };
 
-
-export const handlePlaylistSelect = (selectedPlaylist: string | null, onPlaylistSelect: Function) => {
-  if (selectedPlaylist) {
-    onPlaylistSelect(selectedPlaylist);
-  }
-};
-
-
 export const handlePopupClose = (setIsPopupVisible: React.Dispatch<React.SetStateAction<boolean>>) => {
   setIsPopupVisible(false);
 };
 
-
-export const handleCreatePlaylist = async (newPlaylistName: string, createPlaylist: Function, setNewPlaylistName: React.Dispatch<React.SetStateAction<string>>, setShowCreateInput: React.Dispatch<React.SetStateAction<boolean>>) => {
+export const handleCreatePlaylist = async (songName: string, artistName: string,newPlaylistName: string, createPlaylist: Function, setNewPlaylistName: React.Dispatch<React.SetStateAction<string>>, setShowCreateInput: React.Dispatch<React.SetStateAction<boolean>>) => {
   if (newPlaylistName.trim()) {
-    await createPlaylist(newPlaylistName);
+    await createPlaylist(newPlaylistName, songName, artistName);
     setNewPlaylistName("");
     setShowCreateInput(false);
   } else {
     toast.error("Playlist name cannot be empty");
   }
 };
-
-
-// update backend -> create/playlist
-export const createPlaylist = async (newPlaylistName: string, token: string, songName: string, artistName: string) => {
-  try {
-    const response = await fetch('http://127.0.0.1:7823/create/playlist',{
-      method : "POST", 
-      headers: {
-        "Content-Type" : "application/json",
-        "authorization" : "token",
-      },
-      body: JSON.stringify({name: newPlaylistName})   //update the body to include song and artist name
-    })
-
-    if (response.ok){
-      const data = await response.json()
-      toast.success(`Playlist '${data.name}' created successfully!`)
-      return data.name
-    } else {
-      throw new Error('Failed to create playlist')
-    } 
-  } catch(error) {
-    console.error("Error creating playlist", error)
-    toast.error("Failed to create playlist. Please try again")
-  }
-}
-
