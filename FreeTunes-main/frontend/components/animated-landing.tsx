@@ -52,7 +52,7 @@ export default function AnimatedLanding() {
 
   // const verifyToken = async (token) => {
   //   try{
-  //     const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
+  //     const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
   //       method : "POST", 
   //       headers : {
   //         "Content-Type" : "application/json"
@@ -101,7 +101,7 @@ export default function AnimatedLanding() {
 
     setIsLoading(true)
 
-    socketRef.current = new WebSocket("ws://127.0.0.1:8000/ws")
+    socketRef.current = new WebSocket("ws://127.0.0.1:7823/ws")
 
     socketRef.current.onopen = () => {
       console.log("Webscoket connection established")
@@ -145,7 +145,7 @@ export default function AnimatedLanding() {
       const hls = new Hls();
       hlsRef.current = hls; 
       
-      const desiredUrl = `http://127.0.0.1:8000/static/${m3u8Url}`;
+      const desiredUrl = `http://127.0.0.1:7823/static/${m3u8Url}`;
       console.log("Loading HLS stream from:", desiredUrl);
 
       
@@ -254,7 +254,8 @@ export default function AnimatedLanding() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             >
-              Free Tunes &nbsp;at your eardoors..
+              FreeTunes <br></br>
+              Pure Music, Zero Interruptions
             </motion.h1>
             <motion.p 
               className="max-w-[700px] text-xl text-gray-500 mt-2 font-normal"

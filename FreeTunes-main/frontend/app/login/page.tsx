@@ -20,7 +20,7 @@ export default function Login() {
 
     const verifyToken = async (token) => {
         try{
-          const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
+          const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
             method : "POST", 
             headers : {
               "Content-Type" : "application/json"
@@ -53,7 +53,7 @@ export default function Login() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const response = await fetch("http://127.0.0.1:8000/model/generate/otp", {
+            const response = await fetch("http://127.0.0.1:7823/model/generate/otp", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -81,7 +81,7 @@ export default function Login() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const response = await fetch("http://127.0.0.1:8000/model/verify/otp", {
+            const response = await fetch("http://127.0.0.1:7823/model/verify/otp", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

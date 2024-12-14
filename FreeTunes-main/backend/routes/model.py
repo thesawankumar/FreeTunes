@@ -483,3 +483,45 @@ async def update_playlist(playlist_id: str, updated_data: PlaylistUpdateRequest,
     except Exception as e:
         print(f"Error while updating playlist: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the playlist.")
+
+@model_router.get("/playlist", response_model=List[playlist])
+async def get_playlist(request : Request):
+
+    try:
+        token = request.headers.get("authorization")
+        if not token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found")
+        
+        payload = verify_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token")
+        
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Unauthoriized: User ID missing")
+        
+        user_data = await db["users"].find_one({"_id":ObjectId(user_id)})
+
+        if not user_data:
+            raise HTTPException(status_code=401, detail="user not found")
+        
+        playlist_ids = user_data.get("playlist", [])
+        if not playlist_ids:
+            return []
+        
+        playlists = await db["playlist"].find({"_id": {"$in": [ObjectId(pid) for pid in playlist_ids]}}).to_list(length=None)
+
+        filtered_playlists = []
+
+        for playlist in playlists:
+            playlist["_id"] = str(playlist["_id"])
+            # if playlist.get("liked") is not True:
+            #     filtered_playlists.append(playlist)
+
+        # return filtered_playlists
+        return playlists
+    
+    except Exception as e:
+        print(f"Error fetching playlists: {e}")
+        raise HTTPException(status_code=500, detail="Unexpected Error occured while fetching playlists")
+    

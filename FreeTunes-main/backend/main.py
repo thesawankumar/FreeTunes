@@ -22,3 +22,11 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="hls"))
 app.include_router(router)
 app.include_router(model_router, prefix="/model", tags=["Users"])
+from fastapi import Request
+
+@app.get("/test/getmsg")
+async def get_message(request: Request):
+    user_agent = request.headers.get("User-Agent")
+    referer = request.headers.get("Referer")
+    print(f"Request from {user_agent}, Referer: {referer}")
+    return {"message": "This is a test message."}

@@ -11,6 +11,8 @@ import ReactAudioPlayer from 'react-h5-audio-player';
 import { FaPlay, FaPause, FaArrowLeft, FaArrowRight, FaHeart, FaPlus } from 'react-icons/fa';
 import { MdMusicNote } from 'react-icons/md';
 import Hls from "hls.js";
+import PlusPopup from "@/components/popupCard";
+import { fetchPlaylistNames } from "@/components/utils/popupCardFunctions.ts";
 
 const Dashboard = () => {
   const router = useRouter();
@@ -37,9 +39,57 @@ const Dashboard = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [isUrlavailable, setIsUrlavailable] = useState(false)
 
+  const [isPopupVisible, setIsPopupVisible] = useState(false)
+  const [playlistNames, setPlaylistNames] = useState<string[] | null>(null);
+
+
+  // const handlePlus = async () => {
+  //   setIsPopupVisible(true);
+
+
+  //   const user = JSON.parse(localStorage.getItem("user"));
+  //   const userID = user?.id;
+  //   const token = Cookies.get("access_token");
+  //   const playlistIDs = user?.playlist || [];
+
+  //   if (playlistIDs.length > 0 && token) { 
+  //     const playlistNames = await fetchPlaylistNames(token);
+  //     setPlaylistNames(playlistNames)
+  //   };
+  // }
+
+  // const onPlaylistSelect = async () => {
+  //   toast.success("Hello")
+  // }
+
+  // const handlePopupCloseAction = () => {
+  //   handlePopupClose(setIsPopupVisible);
+  // };
+
+  const handlePlus = async () => {
+    setIsPopupVisible(true);
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = Cookies.get("access_token");
+
+    if (token) {
+      const playlists = await fetchPlaylistNames(token);
+      setPlaylistNames(playlists);
+    }
+  };
+
+  const handlePlaylistSelect = (playlistName) => {
+    toast.success(`Added to ${playlistName}`);
+  };
+
+  const handlePopupClose = () => {
+    setIsPopupVisible(false);
+  };
+
+
   const verifyToken = async (token) => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
+      const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -69,7 +119,7 @@ const Dashboard = () => {
 
   const fetchMusicRecommendations = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/model/recommendations", {
+      const response = await fetch("http://127.0.0.1:7823/model/recommendations", {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -80,16 +130,16 @@ const Dashboard = () => {
         const data = await response.json();
         setMusicRecommendations(data.recommendations);
       } else {
-        toast.error("Failed to fetch music recommendations.");
+        //toast.error("Failed to fetch music recommendations.");
       }
     } catch (error) {
-      toast.error("Error fetching recommendations.");
+      //toast.error("Error fetching recommendations.");
     }
   };
 
   const fetchPlaylists = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/model/playlists", { // Adjust endpoint as necessary
+      const response = await fetch("http://127.0.0.1:7823/model/playlists", { // Adjust endpoint as necessary
         method: "GET",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -100,10 +150,10 @@ const Dashboard = () => {
         const data = await response.json();
         setPlaylist(data.playlists);
       } else {
-        toast.error("Failed to fetch playlists.");
+        //toast.error("Failed to fetch playlists.");
       }
     } catch (error) {
-      toast.error("Error fetching playlists.");
+      //toast.error("Error fetching playlists.");
     }
   };
 
@@ -121,7 +171,7 @@ const Dashboard = () => {
     if (searchQuery) {
       console.log(searchQuery)
         const authToken = Cookies.get('access_token')
-        socketRef.current = new WebSocket("ws://127.0.0.1:8000/ws");
+        socketRef.current = new WebSocket("ws://127.0.0.1:7823/ws");
 
 
         socketRef.current.onopen = () => {
@@ -189,7 +239,7 @@ const Dashboard = () => {
           const hls = new Hls();
           hlsRef.current = hls; 
           
-          const desiredUrl = `http://127.0.0.1:8000/static/${m3u8Url}`;
+          const desiredUrl = `http://127.0.0.1:7823/static/${m3u8Url}`;
           console.log("Loading HLS stream from:", desiredUrl);
       
             
@@ -346,7 +396,7 @@ const Dashboard = () => {
     };
   
     try {
-      const response = await fetch(`http://127.0.0.1:8000/model/update/playlist/${playlistId}`, {
+      const response = await fetch(`http://127.0.0.1:7823/model/update/playlist/${playlistId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -533,8 +583,8 @@ const Dashboard = () => {
                     className={`h-6 w-6 ${isLiked ? "text-purple-600" : "text-gray-400"}`} // Apply the color conditionally
                   />
                 </button>
-
-                <button className="text-white">
+                  
+                <button onClick={handlePlus} className="text-white">
                   <FaPlus className="h-6 w-6" />
                 </button>
               </div>
@@ -564,6 +614,14 @@ const Dashboard = () => {
           </div>
         )}
 
+        {isPopupVisible && (
+          <PlusPopup 
+            handlePlus={() => console.log("Plus action handled")} 
+            onClose={handlePopupClose} 
+            playlistNames={playlistNames}
+            onPlaylistSelect={onPlaylistSelect}
+          />
+        )}
         
       </main>
     </div>

@@ -39,7 +39,7 @@ async def songdetails(search_query):
         return None, None
 
 async def deletefolder(folder_path:str):
-    await asyncio.sleep(300)
+    await asyncio.sleep(360)
 
     if os.path.exists(folder_path):
         shutil.rmtree(folder_path)
