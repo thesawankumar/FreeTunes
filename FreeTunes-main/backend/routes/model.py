@@ -458,6 +458,7 @@ async def update_playlist(playlist_id: str, updated_data: PlaylistUpdateRequest,
         # Update the playlist
         updated_data_dict = updated_data.dict(exclude_unset=True)
         updated_data_dict['songs'] = existing_songs  # Ensure songs are dictionaries
+        updated_data_dict.pop('action', None) 
 
         result = await db["playlist"].update_one(
             {"_id": ObjectId(playlist_id)}, {"$set": updated_data_dict}
