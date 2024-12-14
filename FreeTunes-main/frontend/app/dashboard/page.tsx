@@ -120,16 +120,20 @@ const Dashboard = () => {
   useEffect(() => {
     if (searchQuery) {
       console.log(searchQuery)
+        const authToken = Cookies.get('access_token')
         socketRef.current = new WebSocket("ws://127.0.0.1:8000/ws");
+
 
         socketRef.current.onopen = () => {
             console.log("WebSocket connection established");
+            socketRef.current?.send(JSON.stringify({ type: 'auth', token: authToken }));
             socketRef.current?.send(searchQuery);  
         };
 
         socketRef.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
             console.log(data);
+            
 
             if (data.artist && data.song) {
                 setSongData({
@@ -138,10 +142,18 @@ const Dashboard = () => {
                 });
                 setShowPlayer(true);
             }
+            
+            if(data.liked){
+              setIsLiked(true)
+            } else {
+              setIsLiked(false)
+            }
+
 
             if (data.hls !== undefined) {
                 if (data.hls) {
                     console.log("HLS stream ready");
+                    console.log(isLiked)
                     setM3u8Url(data.file);
                     setIsUrlavailable(true);
                 } else {
@@ -171,59 +183,58 @@ const Dashboard = () => {
   }, [searchQuery]); 
 
 
-
-useEffect(() => {
-    if (isUrlavailable && m3u8Url && Hls.isSupported() && audioRef.current) {
-        
-        const hls = new Hls();
-        hlsRef.current = hls; 
-        
-        const desiredUrl = `http://127.0.0.1:8000/static/${m3u8Url}`;
-        console.log("Loading HLS stream from:", desiredUrl);
-    
+  useEffect(() => {
+      if (isUrlavailable && m3u8Url && Hls.isSupported() && audioRef.current) {
           
-        hls.loadSource(desiredUrl);
-        hls.attachMedia(audioRef.current);
-    
+          const hls = new Hls();
+          hlsRef.current = hls; 
           
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            console.log("HLS manifest parsed, ready to play.");
+          const desiredUrl = `http://127.0.0.1:8000/static/${m3u8Url}`;
+          console.log("Loading HLS stream from:", desiredUrl);
+      
+            
+          hls.loadSource(desiredUrl);
+          hls.attachMedia(audioRef.current);
+      
+            
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              console.log("HLS manifest parsed, ready to play.");
+              setIsHlsReady(true)
+              setIsLoading(false)
+          });
+      
+          
+          hls.on(Hls.Events.ERROR, (event, data) => {
+              console.error("HLS.js error:", data);
+              if (data.fatal) {
+                switch (data.fatal) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    console.error("Network error while fetching .ts files.");
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    console.error("Error loading media.");
+                    break;
+                  case Hls.ErrorTypes.OTHER_ERROR:
+                    console.error("Other HLS.js error.");
+                    break;
+                  default:
+                    break;
+                }
+              }
+          });
+      
+          return () => {
+              hls.destroy();
+              hlsRef.current = null 
+          };
+      } else if (audioRef.current) {
+            
+            audioRef.current.src = m3u8Url;
             setIsHlsReady(true)
             setIsLoading(false)
-        });
-    
-        
-        hls.on(Hls.Events.ERROR, (event, data) => {
-            console.error("HLS.js error:", data);
-            if (data.fatal) {
-              switch (data.fatal) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  console.error("Network error while fetching .ts files.");
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  console.error("Error loading media.");
-                  break;
-                case Hls.ErrorTypes.OTHER_ERROR:
-                  console.error("Other HLS.js error.");
-                  break;
-                default:
-                  break;
-              }
-            }
-        });
-    
-        return () => {
-            hls.destroy();
-            hlsRef.current = null 
-        };
-    } else if (audioRef.current) {
-          
-          audioRef.current.src = m3u8Url;
-          setIsHlsReady(true)
-          setIsLoading(false)
-    }
-}, [isUrlavailable, m3u8Url]);
-     
+      }
+  }, [isUrlavailable, m3u8Url]);
+      
 
   const skip = (seconds: number) => {
     if (audioRef.current) {
@@ -307,50 +318,6 @@ useEffect(() => {
     console.log('State reset complete.');
   };
 
-  // const handleLike = async () => {
-  //   const previousLikedState = isLiked;
-  //   setIsLiked(!isLiked);
-  //   const token = Cookies.get("access_token");
-  //   const user = JSON.parse(localStorage.getItem("user")); 
-  //   const playlistId = user?.playlist[0]; 
-  //   const songInfo = {
-  //     songName: songData.name,
-  //     artistName: songData.artist,
-  //   };
-    
-  //   const requestBody = {
-  //     action: isLiked ? "add" : "remove",
-  //     song: songInfo,
-  //     name: "Liked",
-  //     userID: user.id,
-  //     liked: isLiked
-  //   };
-
-  //   try {
-  //     const response = await fetch(`http://127.0.0.1:8000/model/update/playlist/${playlistId}`, {
-  //       method: "PUT",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         "Authorization": token, // Assuming you have access token stored
-  //       },
-  //       body: JSON.stringify(requestBody),
-  //     });
-  
-  //     if (response.ok) {
-  //       if (!isLiked) {
-  //         toast.success("Added to Liked Songs!");
-  //       } else {
-  //         toast.success("Removed from Liked Songs!");
-  //       }
-  //     } else {
-  //       toast.error("Failed to like the song");
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to like the song", error);
-  //     toast.error("Failed to like the song");
-  //     setIsLiked(previousLikedState)
-  //   }
-  // };
   
   const handleLike = async () => {
     const previousLikedState = isLiked; 
@@ -375,7 +342,7 @@ useEffect(() => {
       song: songInfo,
       name: "Liked",
       userID: user.id,
-      liked: !isLiked,
+      liked: true,
     };
   
     try {
