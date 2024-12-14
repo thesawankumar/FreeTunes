@@ -10,10 +10,13 @@ from jose import jwt, JWTError
 from dotenv import load_dotenv
 from pathlib import Path
 import os
-from models.model import user, playlist
+from models.model import user, playlist, PlaylistItem
 from dbconfig import db
 from pymongo.errors import PyMongoError
 from fastapi.security import OAuth2PasswordBearer
+from typing import Optional, List
+
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 dotenv_path = Path('./client.env')
@@ -26,6 +29,29 @@ EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT"))  
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
+
+class PlaylistUpdateRequest(BaseModel):
+    action: str  
+    song: PlaylistItem  
+    name: str
+    userID: str
+    liked: Optional[bool]
+
+    class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+
+class PlaylistUpdateResponse(BaseModel):
+    name: str
+    userID: str
+    songs: List[PlaylistItem]  
+    liked: Optional[bool]
+
+    class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
@@ -189,7 +215,6 @@ async def verify_otp_new(request: VerifyOtpRequest, response: Response):
         raise HTTPException(status_code=500, detail={"verified":False, "message":"Internal Server Error"})
 
 
-
 @model_router.post("/create/user")
 async def create_user(item: user, request: Request):
     try:
@@ -210,6 +235,22 @@ async def create_user(item: user, request: Request):
         token_data = {"user_id": str(result.inserted_id), "email": item.email}
         token = create_access_token(data=token_data, expires_delta=access_token_expires)
         
+        default_playlist = playlist(
+            name="Liked",
+            userID=str(result.inserted_id),
+            songs=PlaylistItem(songName="Sample Song", artistName="Sample Artist"),
+            liked=True
+        )
+
+        playlist_dict = default_playlist.dict(by_alias=True)
+        playlist_result = await db["playlist"].insert_one(playlist_dict)
+        print(f"Liked playllist inserted with ID : {playlist_result.inserted_id}")
+
+        await db["users"].update_one(
+            {"_id": result.inserted_id},
+            {"$set": {"playlist": [str(playlist_result.inserted_id)]}}
+        )
+
         created_item = await db["users"].find_one({"_id": result.inserted_id})
         
         if created_item:
@@ -355,16 +396,17 @@ async def update_user(user_id: str, updated_data: user, request: Request):
         print(f"Error while updating user: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the user.")
 
-
-@model_router.put("/update/playlist/{playlist_id}", response_model=playlist)
-async def update_playlist(playlist_id: str, updated_data: playlist, request: Request):
+@model_router.put("/update/playlist/{playlist_id}", response_model=PlaylistUpdateResponse)
+async def update_playlist(playlist_id: str, updated_data: PlaylistUpdateRequest, request: Request):
     try:
         print('Verifying user for updating playlist...')
-        token = request.cookies.get("access_token")
-        if not token:
-            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
         
-        payload = verify_access_token(token)
+        # Authorization logic
+        authorization_header = request.headers.get("Authorization")
+        if not authorization_header:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found")
+        
+        payload = verify_access_token(authorization_header)
         if not payload:
             raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
         
@@ -372,33 +414,67 @@ async def update_playlist(playlist_id: str, updated_data: playlist, request: Req
         if not user_id:
             raise HTTPException(status_code=401, detail="Unauthorized: User ID missing in token.")
         
+        # Validate playlist ID
         print(f"Attempting to update playlist with ID: {playlist_id}")
         if not ObjectId.is_valid(playlist_id):
             raise HTTPException(status_code=400, detail="Invalid playlist ID format.")
         
-        playlist = await db["playlists"].find_one({"_id": ObjectId(playlist_id)})
+        playlist = await db["playlist"].find_one({"_id": ObjectId(playlist_id)})
         if not playlist:
             raise HTTPException(status_code=404, detail="Playlist not found.")
         
-        if playlist.get("user_id") != user_id:
+        if playlist.get("userID") != user_id:
             raise HTTPException(status_code=403, detail="Forbidden: You can only update your own playlists.")
         
-        updated_data_dict = updated_data.dict(exclude_unset=True, by_alias=True)
-        
-        result = await db["playlists"].update_one(
+        # Handle the action and song update
+        action = updated_data.action
+        song = updated_data.song
+
+        if not song or not song.songName or not song.artistName:
+            raise HTTPException(status_code=400, detail="Song information missing or invalid.")
+
+        # Get the existing songs from the playlist
+        existing_songs = playlist.get("songs", [])
+
+        # Convert existing songs to dictionaries (in case they're objects)
+        existing_songs = [
+            song.dict() if isinstance(song, PlaylistItem) else song
+            for song in existing_songs
+        ]
+
+        # Add or remove the song based on the action
+        if action == "add":
+            if any(existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName for existing_song in existing_songs):
+                raise HTTPException(status_code=400, detail="Song already exists in the playlist.")
+            existing_songs.append(song.dict())
+        elif action == "remove":
+            existing_songs = [
+                existing_song for existing_song in existing_songs
+                if not (existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName)
+            ]
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action. Use 'add' or 'remove'.")
+
+        # Update the playlist
+        updated_data_dict = updated_data.dict(exclude_unset=True)
+        updated_data_dict['songs'] = existing_songs  # Ensure songs are dictionaries
+
+        result = await db["playlist"].update_one(
             {"_id": ObjectId(playlist_id)}, {"$set": updated_data_dict}
         )
         
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Playlist not found.")
         
-        updated_playlist = await db["playlists"].find_one({"_id": ObjectId(playlist_id)})
+        # Fetch and return the updated playlist
+        updated_playlist = await db["playlist"].find_one({"_id": ObjectId(playlist_id)})
         if updated_playlist:
             updated_playlist["_id"] = str(updated_playlist["_id"])
+        
         if not updated_playlist:
             raise HTTPException(status_code=404, detail="Playlist not found after update.")
         
-        return updated_playlist
+        return PlaylistUpdateResponse(**updated_playlist)
 
     except HTTPException as e:
         raise e

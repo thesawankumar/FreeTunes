@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from bson import ObjectId
 from datetime import datetime
 
@@ -19,6 +19,9 @@ class PyObjectId(ObjectId):
         schema.update(type="string")
         return schema
 
+class PlaylistItem(BaseModel):
+    songName: Optional[str]
+    artistName: Optional[str]
 
 class user(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
@@ -35,7 +38,8 @@ class user(BaseModel):
 class playlist(BaseModel):
     name : str
     userID: str
-    list: list
+    songs: Optional[List[PlaylistItem]]
+    liked: Optional[bool]
 
     class Config:
         allow_population_by_field_name = True

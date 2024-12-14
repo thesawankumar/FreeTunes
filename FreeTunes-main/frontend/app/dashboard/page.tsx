@@ -1,400 +1,606 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import { ArrowLeft, ArrowRight, Music, Play, Pause, Search } from "lucide-react";
 import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
-import {Search } from "lucide-react";
 import Link from "next/link";
-import ReactAudioPlayer from 'react-h5-audio-player'
-import { buttonVariants } from "@/components/ui/button";
-import { siteConfig } from "@/config/site";
-import Hls from "hls.js"
-import 'react-h5-audio-player/lib/styles.css'
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import ReactAudioPlayer from 'react-h5-audio-player';
+import { FaPlay, FaPause, FaArrowLeft, FaArrowRight, FaHeart, FaPlus } from 'react-icons/fa';
+import { MdMusicNote } from 'react-icons/md';
+import Hls from "hls.js";
 
+const Dashboard = () => {
+  const router = useRouter();
+  const [musicRecommendations, setMusicRecommendations] = useState([]);
+  const [playlist, setPlaylist] = useState([]); // State for playlists
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [accessToken, setAccessToken] = useState("");
+  const [songName, setSongName] = useState("");
+  const [artistName, setArtistName] = useState("");
+  const [songData, setSongData] = useState({ name: "", artist: "" });
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [m3u8Url, setM3u8Url] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPlayer, setShowPlayer] = useState(false);
+  const [isPlayerVisible, setIsPlayerVisible] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const hlsRef = useRef<Hls | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const [isHlsReady, setIsHlsReady] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isUrlavailable, setIsUrlavailable] = useState(false)
 
-export default function Dashboard() {
-    const router = useRouter();
-    const [musicRecommendations, setMusicRecommendations] = useState([]);
-    const [playlist, setPlaylist] = useState([]); // State for playlists
-    const [selectedTrack, setSelectedTrack] = useState(null);
-    const [accessToken, setAccessToken] = useState("");
+  const verifyToken = async (token) => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ access_token: token })
+      });
 
-    const [songName, setSongName] = useState("");
-    const [artistName, setArtistName] = useState("");
+      const data = await response.json();
 
-    const [searchQuery, setSearchQuery] = useState("")
-    const [m3u8Url, setM3u8Url] = useState(""); 
-    const [isLoading, setIsLoading] = useState(false); 
-    const [showPlayer, setShowPlayer] = useState(false);
-    const [isPlayerVisible, setIsPlayerVisible] = useState(false)
-    const [songData, setSongData] = useState(null)
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const hlsRef = useRef<Hls | null>(null);
-    const socketRef = useRef<WebSocket | null>(null)
-    const [isHlsReady, setIsHlsReady] = useState(false);
-
-    const verifyToken = async (token) => {
-        try{
-          const response = await fetch("http://127.0.0.1:8000/model/verify/token", {
-            method : "POST", 
-            headers : {
-              "Content-Type" : "application/json"
-            }, 
-            body : JSON.stringify({access_token:token})
-          })
-    
-          const data = await response.json()
-    
-          if(response.ok && data.auth){
-            localStorage.setItem("user", JSON.stringify(data.user))
-            setAccessToken(token);
-            fetchMusicRecommendations();
-            fetchPlaylists(); 
-          } else {
-            router.push("/login")
-          }
-        } catch {
-    
-        }
-      } 
-
-    useEffect(() => {
-        const token = Cookies.get("access_token");
-        verifyToken(token)
-    }, []);
-
-    // Fetch music recommendations from the backend
-    const fetchMusicRecommendations = async () => {
-        try {
-            const response = await fetch("http://127.0.0.1:8000/model/recommendations", {
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setMusicRecommendations(data.recommendations);
-            } else {
-                toast.error("Failed to fetch music recommendations.");
-            }
-        } catch (error) {
-            toast.error("Error fetching recommendations.");
-        }
-    };
-
-    // Fetch playlists from the backend
-    const fetchPlaylists = async () => {
-        try {
-            const response = await fetch("http://127.0.0.1:8000/model/playlists", { // Adjust endpoint as necessary
-                method: "GET",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
-                },
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setPlaylist(data.playlists);
-            } else {
-                toast.error("Failed to fetch playlists.");
-            }
-        } catch (error) {
-            toast.error("Error fetching playlists.");
-        }
-    };
-
-    const Loader = () => (
-        <motion.div
-          className="flex justify-center items-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.div
-            className="w-12 h-12 border-4 border-t-transparent border-indigo-500 border-solid rounded-full animate-spin"
-            style={{
-              borderColor: 'rgba(255, 255, 255, 0.5)',
-              borderTopColor: 'rgba(255, 255, 255, 0.8)',
-            }}
-          />
-        </motion.div>
-      );
-
-    const handleSearch = async () => {
-        setSearchQuery(`${songName} ${artistName}`)
-        if (!searchQuery) return; 
-    
-        setIsLoading(true)
-    
-        socketRef.current = new WebSocket("ws://127.0.0.1:8000/ws")
-    
-        socketRef.current.onopen = () => {
-          console.log("Webscoket connection established")
-          socketRef.current?.send(searchQuery)
-        }
-    
-        socketRef.current.onmessage = (event) => {
-          const data = JSON.parse(event.data)
-          console.log(data)
-    
-          if(data.artist && data.song){
-            setSongData({
-              name: data.song,
-              artist: data.artist
-            })
-            setShowPlayer(true)
-          }
-    
-          if(data.hls){
-            setM3u8Url(data.file)
-          }
-    
-          if(!data.hls){
-            console.log("HLS stream not ready")
-          }
-        }
-          
-        socketRef.current.onerror = () => {
-          console.error("Websocket error:", error)
-        }
-    
-        socketRef.current.onclose = () => {
-          console.log("WebSocket connection closed")
-          setIsLoading(false)
-        }
-        }
-    
-    useEffect(() => {
-        if (m3u8Url && Hls.isSupported() && audioRef.current) {
-              
-            const hls = new Hls();
-            hlsRef.current = hls; 
-              
-            const desiredUrl = `http://127.0.0.1:8000/static/${m3u8Url}`;
-            console.log("Loading HLS stream from:", desiredUrl);
-        
-              
-            hls.loadSource(desiredUrl);
-            hls.attachMedia(audioRef.current);
-        
-              
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                console.log("HLS manifest parsed, ready to play.");
-                setIsHlsReady(true)
-            });
-        
-              // Error handling
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error("HLS.js error:", data);
-                if (data.fatal) {
-                  switch (data.fatal) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
-                      console.error("Network error while fetching .ts files.");
-                      break;
-                    case Hls.ErrorTypes.MEDIA_ERROR:
-                      console.error("Error loading media.");
-                      break;
-                    case Hls.ErrorTypes.OTHER_ERROR:
-                      console.error("Other HLS.js error.");
-                      break;
-                    default:
-                      break;
-                  }
-                }
-            });
-        
-            return () => {
-                hls.destroy(); // Cleanup HLS.js when the component is unmounted
-            };
-        } else if (audioRef.current) {
-              // Fallback for browsers that support m3u8 natively
-              audioRef.current.src = m3u8Url;
-              setIsHlsReady(true)
-        }
-    }, [m3u8Url]);
-          
-    const skip = (seconds: number) => {
-        if (audioRef.current) {
-          audioRef.current.currentTime += seconds;
-        }
-      };
-    
-      const handleTimeUpdate = () => {
-        if (audioRef.current) {
-          setCurrentTime(audioRef.current.currentTime);
-          setDuration(audioRef.current.duration || 0);
-        }
-      };
-    
-      const formatTime = (time: number) => {
-        const minutes = Math.floor(time / 60);
-        const seconds = Math.floor(time % 60);
-        return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-      };
-    
-      const togglePlayPause = () => {
-        if (!audioRef.current) return;
-    
-        if (audioRef.current.paused) {
-          audioRef.current.play();
-          setIsPlaying(true);
-        } else {
-          audioRef.current.pause();
-          setIsPlaying(false);
-        }
-      };
-    
-      const handleSeek = (e: React.MouseEvent) => {
-        if (!audioRef.current) return;
-        const progressBar = e.currentTarget;
-        const newTime = ((e.nativeEvent.offsetX / progressBar.offsetWidth) * duration);
-        audioRef.current.currentTime = newTime;
-      };
-    
-      const handlePlayClick = () => {
-        setIsPlayerVisible(true)
+      if (response.ok && data.auth) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        setAccessToken(token);
+        fetchMusicRecommendations();
+        fetchPlaylists();
+      } else {
+        router.push("/login");
       }
+    } catch {
+      // Handle error
+    }
+  };
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    verifyToken(token);
+  }, []);
+
+  const fetchMusicRecommendations = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/model/recommendations", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMusicRecommendations(data.recommendations);
+      } else {
+        toast.error("Failed to fetch music recommendations.");
+      }
+    } catch (error) {
+      toast.error("Error fetching recommendations.");
+    }
+  };
+
+  const fetchPlaylists = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/model/playlists", { // Adjust endpoint as necessary
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPlaylist(data.playlists);
+      } else {
+        toast.error("Failed to fetch playlists.");
+      }
+    } catch (error) {
+      toast.error("Error fetching playlists.");
+    }
+  };
+
+  const handleSearch = async () => {
+    setSongData({ song: songName, artist: artistName });
+    resetPlayer();
+    console.log(songName);
+    
+    
+    setSearchQuery(`${songName} ${artistName} song`);
+    setIsLoading(true);
+  };
+
+  useEffect(() => {
+    if (searchQuery) {
+      console.log(searchQuery)
+        socketRef.current = new WebSocket("ws://127.0.0.1:8000/ws");
+
+        socketRef.current.onopen = () => {
+            console.log("WebSocket connection established");
+            socketRef.current?.send(searchQuery);  
+        };
+
+        socketRef.current.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log(data);
+
+            if (data.artist && data.song) {
+                setSongData({
+                    name: data.song,
+                    artist: data.artist,
+                });
+                setShowPlayer(true);
+            }
+
+            if (data.hls !== undefined) {
+                if (data.hls) {
+                    console.log("HLS stream ready");
+                    setM3u8Url(data.file);
+                    setIsUrlavailable(true);
+                } else {
+                    setIsLoading(true)
+                    console.log("HLS stream not ready");
+                    setM3u8Url("");
+                    setIsUrlavailable(false);
+                }
+            }
+        };
+
+        socketRef.current.onerror = () => {
+            console.error("Websocket error:", error);
+        };
+
+        socketRef.current.onclose = () => {
+            console.log("WebSocket connection closed");
+            setIsLoading(false);
+        };
+
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.close();
+            }
+        };
+    }
+  }, [searchQuery]); 
 
 
-    return (
-        <div className="flex flex-col min-h-screen bg-gradient-to-br from-indigo-900 to-purple-900 text-white p-6">
-            <ToastContainer />
-            
-            {/* Search Bar */}
 
-            <div className="flex justify-center items-center mb-8">
-            <input 
-                type="text" 
-                placeholder="Song name" 
-                value={songName}
-                onChange={(e) => setSongName(e.target.value)}
-                className="flex-grow p-4 bg-white/10 border border-white/20 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 mr-2 max-w-md" // Increased width with max-w-md
-            />
-            <input 
-                type="text" 
-                placeholder="Artist name" 
-                value={artistName}
-                onChange={(e) => setArtistName(e.target.value)}
-                className="flex-grow p-4 bg-white/10 border border-white/20 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-md" // Increased width with max-w-md
-            />
-            <button 
-                onClick={handleSearch}
-                className="ml-2 p-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full hover:scale-105 transition-all"
-            >
-                <Search className="h-5 w-5" />
-            </button>
-            </div>
-            
-            {/* Music Player */}
-            <div className="flex justify-center items-center">
-            {showPlayer && songData && (     
-                <div className="mt-8 w-full max-w-5xl p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
-            <h3 className="text-2xl font-bold">{songData.name}</h3>
-            <p className="text-gray-400">{songData.artist}</p>
+useEffect(() => {
+    if (isUrlavailable && m3u8Url && Hls.isSupported() && audioRef.current) {
+        
+        const hls = new Hls();
+        hlsRef.current = hls; 
+        
+        const desiredUrl = `http://127.0.0.1:8000/static/${m3u8Url}`;
+        console.log("Loading HLS stream from:", desiredUrl);
+    
+          
+        hls.loadSource(desiredUrl);
+        hls.attachMedia(audioRef.current);
+    
+          
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log("HLS manifest parsed, ready to play.");
+            setIsHlsReady(true)
+            setIsLoading(false)
+        });
+    
+        
+        hls.on(Hls.Events.ERROR, (event, data) => {
+            console.error("HLS.js error:", data);
+            if (data.fatal) {
+              switch (data.fatal) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.error("Network error while fetching .ts files.");
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.error("Error loading media.");
+                  break;
+                case Hls.ErrorTypes.OTHER_ERROR:
+                  console.error("Other HLS.js error.");
+                  break;
+                default:
+                  break;
+              }
+            }
+        });
+    
+        return () => {
+            hls.destroy();
+            hlsRef.current = null 
+        };
+    } else if (audioRef.current) {
+          
+          audioRef.current.src = m3u8Url;
+          setIsHlsReady(true)
+          setIsLoading(false)
+    }
+}, [isUrlavailable, m3u8Url]);
+     
 
-            <div className="mt-4 flex flex-col items-center">
+  const skip = (seconds: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime += seconds;
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      setDuration(audioRef.current.duration || 0);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
+
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+
+    if (audioRef.current.paused) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    } else {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (!audioRef.current || duration === 0) return;
+  
+    const progressBar = e.currentTarget; 
+    const rect = progressBar.getBoundingClientRect();
+    const clickPosition = e.clientX - rect.left; 
+    const newTime = (clickPosition / progressBar.offsetWidth) * duration;
+  
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const handlePlayClick = () => {
+    setIsPlayerVisible(true);
+  };
+
+  const resetPlayer = () => {
+    setIsLoading(true)
+    console.log('Resetting player...');
+    if (audioRef.current) {
+        audioRef.current.pause();
+        console.log('Audio paused.');
+        audioRef.current.src = '';
+        audioRef.current.load();
+        audioRef.current.currentTime = 0;
+        console.log('Audio element reset.');
+    }
+
+    if (hlsRef.current) {
+        hlsRef.current.destroy();
+        console.log('HLS instance destroyed.');
+        hlsRef.current = null;
+    }
+
+    if (socketRef.current) {
+        socketRef.current.close();
+        console.log('WebSocket connection closed.');
+        socketRef.current = null;
+    }
+
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
+    setM3u8Url('');
+    setIsHlsReady(false);
+    // setSongData(null);
+    setIsUrlavailable(false);
+    console.log('State reset complete.');
+  };
+
+  // const handleLike = async () => {
+  //   const previousLikedState = isLiked;
+  //   setIsLiked(!isLiked);
+  //   const token = Cookies.get("access_token");
+  //   const user = JSON.parse(localStorage.getItem("user")); 
+  //   const playlistId = user?.playlist[0]; 
+  //   const songInfo = {
+  //     songName: songData.name,
+  //     artistName: songData.artist,
+  //   };
+    
+  //   const requestBody = {
+  //     action: isLiked ? "add" : "remove",
+  //     song: songInfo,
+  //     name: "Liked",
+  //     userID: user.id,
+  //     liked: isLiked
+  //   };
+
+  //   try {
+  //     const response = await fetch(`http://127.0.0.1:8000/model/update/playlist/${playlistId}`, {
+  //       method: "PUT",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "Authorization": token, // Assuming you have access token stored
+  //       },
+  //       body: JSON.stringify(requestBody),
+  //     });
+  
+  //     if (response.ok) {
+  //       if (!isLiked) {
+  //         toast.success("Added to Liked Songs!");
+  //       } else {
+  //         toast.success("Removed from Liked Songs!");
+  //       }
+  //     } else {
+  //       toast.error("Failed to like the song");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to like the song", error);
+  //     toast.error("Failed to like the song");
+  //     setIsLiked(previousLikedState)
+  //   }
+  // };
+  
+  const handleLike = async () => {
+    const previousLikedState = isLiked; 
+    setIsLiked(!isLiked);
+    const token = Cookies.get("access_token"); 
+    const user = JSON.parse(localStorage.getItem("user")); 
+    const playlistId = user?.playlist[0]; 
+  
+    if (!playlistId) {
+      toast.error("Playlist not found. Please try again.");
+      setIsLiked(previousLikedState);
+      return;
+    }
+  
+    const songInfo = {
+      songName: songData.name,
+      artistName: songData.artist,
+    };
+  
+    const requestBody = {
+      action: !isLiked ? "add" : "remove", 
+      song: songInfo,
+      name: "Liked",
+      userID: user.id,
+      liked: !isLiked,
+    };
+  
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/model/update/playlist/${playlistId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token, 
+        },
+        body: JSON.stringify(requestBody),
+      });
+  
+      if (response.ok) {
+        const result = await response.json();
+        if (!isLiked) {
+          toast.success("Added to Liked Songs!");
+        } else {
+          toast.success("Removed from Liked Songs!");
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to update the playlist");
+      }
+    } catch (error) {
+      console.error("Error in handleLike:", error.message);
+      toast.error("Failed to like the song");
+      setIsLiked(previousLikedState); 
+    }
+  };
+  
+
+  return (
+    <div className="min-h-screen flex bg-gray-950 text-white">
+      <ToastContainer />
+      {/* Sidebar */}
+      <aside className="w-72 bg-gradient-to-br from-indigo-700 via-purple-800 to-purple-900 text-white p-6">
+        <h1 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-300">
+          FreeTunes
+        </h1>
+        <nav>
+          <ul className="space-y-4">
+            {["Home", "Playlists", "Favorites", "Settings"].map((item, idx) => (
+              <motion.li
+                key={idx}
+                whileHover={{ scale: 1.05, x: 5 }}
+                className="hover:bg-purple-600 hover:bg-opacity-30 p-3 rounded-lg transition-all cursor-pointer"
+              >
+                <a href="#">{item}</a>
+              </motion.li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        <h2 className="text-4xl font-extrabold text-gray-100 mb-6">
+          Welcome Back!
+        </h2>      
+
+        {/* Search Bar */}
+        <div className="flex items-center space-x-4 mb-6">
+          <input
+            type="text"
+            placeholder="Song name"
+            value={songName}
+            onChange={(e) => setSongName(e.target.value)}
+            className="flex-grow p-4 bg-white/10 border border-white/20 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <input
+            type="text"
+            placeholder="Artist name"
+            value={artistName}
+            onChange={(e) => setArtistName(e.target.value)}
+            className="flex-grow p-4 bg-white/10 border border-white/20 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <button
+            onClick={handleSearch}
+            className="p-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full hover:scale-105 transition-all"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Recently Played */}
+       <section className="mb-12">
+          <h3 className="text-2xl font-semibold text-gray-200 mb-4">
+            Recently Played
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, idx) => (
+              <motion.div
+                key={idx}
+                whileHover={{ scale: 1.03 }}
+                className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 shadow-lg rounded-xl p-4 flex items-center gap-4 transition-all"
+              >
+                <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
+                  <Music className="text-gray-300 w-8 h-8" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-white">Song Title</h4>
+                  <p className="text-gray-400 text-sm">Artist Name</p>
+                </div>
+                <button
+                  className="text-indigo-400 hover:text-indigo-600 transition-all"
+                  onClick={togglePlayPause}
+                >
+                  {isPlaying ? <Pause /> : <Play />}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* Playlists */}
+        <section>
+          <h3 className="text-2xl font-semibold text-gray-200 mb-4">
+            Your Playlists
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, idx) => (
+              <motion.div
+                key={idx}
+                whileHover={{ scale: 1.05 }}
+                className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 shadow-lg rounded-xl p-6 flex flex-col items-center transition-all"
+              >
+                <div className="w-32 h-32 bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
+                  <Music className="text-gray-300 w-12 h-12" />
+                </div>
+                <h4 className="font-bold text-white">Playlist Name</h4>
+                <p className="text-gray-400 text-sm">10 Songs</p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {showPlayer && songData && (
+          <div className="bg-black p-6 fixed bottom-0 left-0 w-full z-10">
+            <div className="flex justify-between items-center">
+              {/* Song Details and Music Icon */}
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gray-700 flex items-center justify-center">
+                  <Music className="text-white w-6 h-6" />
+                </div>
+                <div className="ml-4 text-white">
+                  <h4 className="font-semibold text-lg">{songData.name}</h4>
+                  <p className="text-gray-400 text-sm">{songData.artist}</p>
+                </div>
+              </div>
+
+              {/* Centered Buttons Section */}
               <audio
                 ref={audioRef}
                 onTimeUpdate={handleTimeUpdate}
-                className="hidden"
+                src={m3u8Url}  // Ensure you are setting the source if needed
+                className="hidden" // Keep hidden unless you want to show native controls
+                preload="auto"
               />
 
-              {/* Custom Controls */}
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => skip(-5)}
-                  className="text-white p-2 rounded-md hover:bg-gray-600"
-                >
-                  <ArrowLeft className="w-5 h-5"/>
+              <div className="flex items-center space-x-6">
+                <button onClick={() => skip(-10)} className="text-white hover:text-gray-400 transition duration-200">
+                  <ArrowLeft className="h-8 w-8" />
                 </button>
-
-                {/* Play Button with Loading Text */}
                 <button
                   onClick={togglePlayPause}
-                  className="text-white bg-indigo-500 px-6 py-2 rounded-full hover:scale-105 transition-transform"
-                  disabled={!isHlsReady} // Disable until HLS is ready
+                  className="text-white hover:text-gray-400 transition duration-200"
+                  disabled={!isHlsReady || isLoading}
                 >
-                  {isHlsReady ? (isPlaying ? "Pause" : "Play") : "Loading..."} {/* Show "Loading..." until HLS is ready */}
+                  {isLoading ? (
+                    <div className="w-8 h-8 border-4 border-t-transparent border-indigo-500 rounded-full animate-spin"></div>
+                  ) : isHlsReady ? (
+                    isPlaying ? (
+                      <Pause className="h-8 w-8" />
+                    ) : (
+                      <Play className="h-8 w-8" />
+                    )
+                  ) : null }
                 </button>
-
-                <button
-                  onClick={() => skip(5)}
-                  className="text-white p-2 rounded-md hover:bg-gray-600"
-                >
-                  <ArrowRight className="w-5 h-5" />
+                <button onClick={() => skip(10)} className="text-white hover:text-gray-400 transition duration-200">
+                  <ArrowRight className="h-8 w-8" />
                 </button>
               </div>
 
-              {/* Progress Bar */}
+              {/* Right Section with Liked Button */}
+              <div className="flex items-center space-x-6">
+                <button className="text-white" onClick={handleLike}>
+                  <FaHeart
+                    className={`h-6 w-6 ${isLiked ? "text-purple-600" : "text-gray-400"}`} // Apply the color conditionally
+                  />
+                </button>
+
+                <button className="text-white">
+                  <FaPlus className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mt-4 w-full bg-gray-700 rounded-full">
+            <div
+              onClick={handleSeek}
+              className="relative w-full h-2 bg-gray-700 rounded-full cursor-pointer"
+            >
               <div
-                className="mt-4 w-full bg-gray-700 rounded-full h-2 relative"
+                className="absolute top-0 left-0 h-2 bg-indigo-500 rounded-full"
+                style={{ width: `${(currentTime / duration) * 100}%` }}
+              />
+            </div>
+              {/* <div
                 onClick={handleSeek}
-              >
-                <div
-                  style={{
-                    width: `${(currentTime / duration) * 100 || 0}%`,
-                  }}
-                  className="bg-indigo-500 h-2 rounded-full"
-                ></div>
-              </div>
-
-              {/* Time Labels */}
-              <div className="mt-2 flex justify-between w-full text-sm text-gray-400">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
+                className="h-2 bg-indigo-500 rounded-full"
+                style={{ width: `${(currentTime / duration) * 100}%` }}
+              /> */}
             </div>
-                </div>
-            )}
-
-            {isLoading && !songData && <Loader />}
+            <div className="flex justify-between text-sm mt-2 text-gray-400">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
             </div>
+          </div>
+        )}
 
-            {/* Music Recommendations */}
-            <h2 className="text-xl font-bold mt-8">Recommended For You</h2>
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {musicRecommendations.map((track) => (
-                    <motion.div 
-                        key={track.id} 
-                        className="flex flex-col items-center p-4 bg-white/10 border border-white/20 rounded-lg cursor-pointer hover:bg-white/20"
-                        onClick={() => playTrack(track)}
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        transition={{ duration: 0.5 }}
-                    >
-                        <img src={track.coverImage} alt={track.title} className="w-full h-auto rounded-md mb-2" />
-                        <h3 className="text-lg font-semibold">{track.title}</h3>
-                        <p className="text-sm text-gray-400">{track.artist}</p>
-                    </motion.div>
-                ))}
-            </div>
+        
+      </main>
+    </div>
+  );
+};
 
-            {/* Playlists Section */}
-            <h2 className="text-xl font-bold mt-8">Your Playlists</h2>
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {playlist.map((pl) => (
-                    <motion.div 
-                        key={pl.id} 
-                        className="flex flex-col items-center p-4 bg-white/10 border border-white/20 rounded-lg cursor-pointer hover:bg-white/20"
-                        onClick={() => console.log(`Opening playlist: ${pl.name}`)} // Placeholder action for playlist click
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
-                        transition={{ duration: 0.5 }}
-                    >
-                        <img src={pl.coverImage} alt={pl.name} className="w-full h-auto rounded-md mb-2" />
-                        <h3 className="text-lg font-semibold">{pl.name}</h3>
-                    </motion.div>
-                ))}
-            </div>
-        </div>
-    );
-}
+export default Dashboard;
