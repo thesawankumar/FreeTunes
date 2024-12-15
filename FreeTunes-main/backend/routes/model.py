@@ -412,7 +412,7 @@ async def update_playlist(playlist_id: str, updated_data: PlaylistUpdateRequest,
         print('Verifying user for updating playlist...')
         
         # Authorization logic
-        authorization_header = request.headers.get("Authorization")
+        authorization_header = request.headers.get("authorization")
         if not authorization_header:
             raise HTTPException(status_code=401, detail="Unauthorized: Token not found")
         
@@ -569,3 +569,129 @@ async def get_playlist_id(request: Request):
     except Exception as e:
         print(f"Error while fetching playlist ID: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the playlist ID.")
+
+
+@model_router.get("/playlist/{playlist_id}", response_model=playlist)
+async def get_playlist_by_id(playlist_id:str, request: Request):
+    try:
+        token = request.headers.get("authorization")
+        if not token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
+        
+        payload = verify_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+        
+        user_id = payload.get("user_id")
+
+        print(playlist_id)
+        playlist = await db["playlist"].find_one({"_id":ObjectId(playlist_id), "userID": user_id})
+
+        if not playlist:
+            print('1')
+            raise HTTPException(status_code=404, detail="Playlist not found")
+        
+        return playlist
+    except Exception as e:
+        print(f"Error while fetching playlist: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occured")
+
+@model_router.put("/update/playlist/popup/{playlist_id}", response_model=PlaylistUpdateResponse)
+async def update_playlist_popup(playlist_id :str, updated_data: PlaylistUpdateRequest, request: Request):
+    try:
+        print('Verifying user for updating playlist...')
+        
+        # Authorization logic
+        authorization_header = request.headers.get("authorization")
+        if not authorization_header:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found")
+        
+        payload = verify_access_token(authorization_header)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+        
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: User ID missing in token.")
+        
+        # Validate playlist ID
+        print(f"Attempting to update playlist with ID: {playlist_id}")
+        if not ObjectId.is_valid(playlist_id):
+            raise HTTPException(status_code=400, detail="Invalid playlist ID format.")
+        
+        playlist = await db["playlist"].find_one({"_id": ObjectId(playlist_id)})
+        if not playlist:
+            raise HTTPException(status_code=404, detail="Playlist not found.")
+        
+        if playlist.get("userID") != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only update your own playlists.")
+        
+        # Handle the action and song update
+        action = updated_data.action
+        song = updated_data.song
+
+        if not song or not song.songName or not song.artistName:
+            raise HTTPException(status_code=400, detail="Song information missing or invalid.")
+
+        # Get the existing songs from the playlist
+        existing_songs = playlist.get("songs", [])
+
+        # Convert existing songs to dictionaries (in case they're objects)
+        existing_songs = [
+            song.dict() if isinstance(song, PlaylistItem) else song
+            for song in existing_songs
+        ]
+
+        # Add or remove the song based on the action
+        # if action == "add":
+        #     if not any(existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName for existing_song in existing_songs):
+        #         existing_songs.append(song.dict())
+        # elif action == "remove":
+        #     existing_songs = [
+        #         existing_song for existing_song in existing_songs
+        #         if not (existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName)
+        #     ]
+        # else:
+        #     raise HTTPException(status_code=400, detail="Invalid action. Use 'add' or 'remove'.")
+
+        if action == "add":
+            if not any(existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName for existing_song in existing_songs):
+                existing_songs.append(song.dict())
+        elif action == "remove":
+            if any(existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName for existing_song in existing_songs):
+                existing_songs = [
+                    existing_song for existing_song in existing_songs
+                    if not (existing_song['songName'] == song.songName and existing_song['artistName'] == song.artistName)
+                ]
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action. Use 'add' or 'remove'.")
+
+        # Update the playlist
+        updated_data_dict = updated_data.dict(exclude_unset=True)
+        updated_data_dict['songs'] = existing_songs  # Ensure songs are dictionaries
+        updated_data_dict.pop('action', None) 
+
+        result = await db["playlist"].update_one(
+            {"_id": ObjectId(playlist_id)}, {"$set": updated_data_dict}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Playlist not found.")
+        
+        # Fetch and return the updated playlist
+        updated_playlist = await db["playlist"].find_one({"_id": ObjectId(playlist_id)})
+        if updated_playlist:
+            updated_playlist["_id"] = str(updated_playlist["_id"])
+        
+        if not updated_playlist:
+            raise HTTPException(status_code=404, detail="Playlist not found after update.")
+        
+        return PlaylistUpdateResponse(**updated_playlist)
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        print(f"Error while updating playlist: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the playlist.")    
+

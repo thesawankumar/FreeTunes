@@ -1,14 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FaTimes, FaCheckCircle } from "react-icons/fa";
 import { handlePlaylistClick, handleSubmit } from "./utils/playlistHelpers"; // Import the functions
 import { handleCreatePlaylist } from "./utils/popupCardFunctions";
+import Cookies from 'js-cookie'
+import { fetchPlaylistNames } from "./utils/popupCardFunctions";
 
 interface PlusPopupProps {
   onClose: () => void;
   playlistNames: string[] | null;
   onPlaylistSelect: (playlistName: string) => void;
-  createPlaylist: (playlistName: string) => void;
+  createPlaylist: (playlistName: string, songName: string, artistName: string) => void;
   songName: string; 
   artistName: string;
 }
@@ -22,8 +24,21 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
   artistName,
 }) => {
   const [selectedPlaylists, setSelectedPlaylists] = useState<string[]>([]);
+  const [unselectedPlaylists, setUnselectedPlaylists] = useState<string[]>([]);
   const [newPlaylistName, setNewPlaylistName] = useState(""); 
   const [showCreateInput, setShowCreateInput] = useState(false); 
+
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      const token = Cookies.get("access_token");
+      if (token) {
+        const { selectedPlaylists, unselectedPlaylists } = await fetchPlaylistNames(token, songName, artistName);
+        setSelectedPlaylists(selectedPlaylists);
+        setUnselectedPlaylists(unselectedPlaylists);
+      }
+    };
+    fetchPlaylists();
+  }, [playlistNames]);
 
   return (
     <motion.div
@@ -49,7 +64,7 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
           </div>
         ) : (
           <div className="space-y-5">
-            {playlistNames?.map((playlist, idx) => (
+            {/* {playlistNames?.map((playlist, idx) => (
               <div
                 key={idx}
                 onClick={() => handlePlaylistClick(selectedPlaylists, playlist, setSelectedPlaylists)}
@@ -64,6 +79,36 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
                 >
                   {selectedPlaylists.includes(playlist) && <FaCheckCircle className="text-white w-4 h-4" />}
                 </div>
+                <span className="text-white text-lg font-semibold">{playlist}</span>
+              </div>
+            ))} */}
+
+            {/* Display Selected Playlists */}
+            {selectedPlaylists.map((playlist, idx) => (
+              <div
+                key={idx}
+                onClick={() => handlePlaylistClick(selectedPlaylists, playlist, setSelectedPlaylists, setUnselectedPlaylists)}
+                className={`flex items-center space-x-4 cursor-pointer p-4 rounded-2xl transition-transform transform hover:bg-indigo-700 hover:scale-105 bg-indigo-600 shadow-lg scale-105`}
+              >
+                <div
+                  className="w-7 h-7 rounded-full border-2 border-indigo-500 flex items-center justify-center transition-transform bg-indigo-500"
+                >
+                  <FaCheckCircle className="text-white w-4 h-4" />
+                </div>
+                <span className="text-white text-lg font-semibold">{playlist}</span>
+              </div>
+            ))}
+
+            {/* Display Unselected Playlists */}
+            {unselectedPlaylists.map((playlist, idx) => (
+              <div
+                key={idx}
+                onClick={() => handlePlaylistClick(selectedPlaylists, playlist, setSelectedPlaylists, setUnselectedPlaylists)}
+                className={`flex items-center space-x-4 cursor-pointer p-4 rounded-2xl transition-transform transform hover:bg-indigo-700 hover:scale-105`}
+              >
+                <div
+                  className="w-7 h-7 rounded-full border-2 border-indigo-500 flex items-center justify-center transition-transform bg-transparent"
+                ></div>
                 <span className="text-white text-lg font-semibold">{playlist}</span>
               </div>
             ))}
@@ -102,7 +147,7 @@ const PlusPopup: React.FC<PlusPopupProps> = ({
 
         <div className="mt-8 flex justify-end">
           <button
-            onClick={() => handleSubmit(selectedPlaylists, onClose, songName, artistName)} 
+            onClick={() => handleSubmit(unselectedPlaylists,selectedPlaylists, onClose, songName, artistName )} 
             className="bg-gradient-to-r from-indigo-500 to-purple-700 text-white px-8 py-3 rounded-2xl hover:bg-gradient-to-l transition-all ease-out duration-300 transform hover:scale-105"
           >
             Submit

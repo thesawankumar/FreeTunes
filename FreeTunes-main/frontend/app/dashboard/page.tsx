@@ -42,36 +42,14 @@ const Dashboard = () => {
   const [isPopupVisible, setIsPopupVisible] = useState(false)
   const [playlistNames, setPlaylistNames] = useState<string[] | null>(null);
 
-
-  // const handlePlus = async () => {
-  //   setIsPopupVisible(true);
-
-
-  //   const user = JSON.parse(localStorage.getItem("user"));
-  //   const userID = user?.id;
-  //   const token = Cookies.get("access_token");
-  //   const playlistIDs = user?.playlist || [];
-
-  //   if (playlistIDs.length > 0 && token) { 
-  //     const playlistNames = await fetchPlaylistNames(token);
-  //     setPlaylistNames(playlistNames)
-  //   };
-  // }
-
-  // const onPlaylistSelect = async () => {
-  //   toast.success("Hello")
-  // }
-
-  // const handlePopupCloseAction = () => {
-  //   handlePopupClose(setIsPopupVisible);
-  // };
   
   const handlePlus = async () => {
     setIsPopupVisible(true);
     const token = Cookies.get("access_token");
     if (token) {
-      const playlistNames = await fetchPlaylistNames(token);
-      setPlaylistNames(playlistNames);
+      const { selectedPlaylists, unselectedPlaylists } = await fetchPlaylistNames(token, songData.name, songData.artist);
+      const combinedPlaylists = [...selectedPlaylists, ...unselectedPlaylists];
+      setPlaylistNames(combinedPlaylists);
     }
   };
 
@@ -110,9 +88,11 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json();
         console.log("Playlist created successfully", data);
-        const playlistNames = await fetchPlaylistNames(token);
-        setPlaylistNames(playlistNames);
-        console.log(playlistNames)
+
+        const { selectedPlaylists, unselectedPlaylists } = await fetchPlaylistNames(token, songData.name, songData.artist);
+        const combinedPlaylists = [...selectedPlaylists, ...unselectedPlaylists];
+        setPlaylistNames(combinedPlaylists);
+        console.log(combinedPlaylists)
         return data;
 
       } else {
@@ -661,8 +641,8 @@ const Dashboard = () => {
             playlistNames={playlistNames}
             onPlaylistSelect={handlePlaylistSelect}
             createPlaylist={createPlaylist}
-            songName={songName}  // Pass songName here
-            artistName={artistName}
+            songName={songData.name}  // Pass songName here
+            artistName={songData.artist}
           />
         )}
         
