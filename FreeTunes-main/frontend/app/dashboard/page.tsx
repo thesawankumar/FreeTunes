@@ -136,6 +136,7 @@ const Dashboard = () => {
   useEffect(() => {
     const token = Cookies.get("access_token");
     verifyToken(token);
+    fetchPlaylists()
   }, []);
 
   const fetchMusicRecommendations = async () => {
@@ -160,23 +161,65 @@ const Dashboard = () => {
 
   const fetchPlaylists = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:7823/model/playlists", { // Adjust endpoint as necessary
+      const token = Cookies.get("access_token");
+      const response = await fetch('http://127.0.0.1:7823/model/playlist', {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
           "Content-Type": "application/json",
+          "authorization": token,
         },
       });
+  
       if (response.ok) {
         const data = await response.json();
-        setPlaylist(data.playlists);
+        
+        const playlists = data
+        .filter((playlist) => !playlist.liked) 
+        .map((playlist) => ({
+          name: playlist.name,
+          songCount: playlist.songs.length,
+        }));
+  
+        setPlaylist(playlists); 
       } else {
-        //toast.error("Failed to fetch playlists.");
+        throw new Error("Failed to fetch playlists");
       }
     } catch (error) {
-      //toast.error("Error fetching playlists.");
+      console.error("Error fetching playlists:", error);
+      toast.error("Failed to fetch playlists.");
     }
   };
+  
+
+  const updateSongHistory = async (songName,songArtist) => {
+    try {
+      const token = Cookies.get("access_token")
+      
+      const payload = {
+        songName: songName,
+        artistName: songArtist
+      };
+      
+      console.log('Sending request with payload:', payload); 
+      
+      const response = await fetch("http://127.0.0.1:7823/model/update/history", {
+        method: "PUT", 
+        headers: {
+          "Content-Type" : "application/json",
+          "authorization" : token
+        },
+        body : JSON.stringify(payload),
+      })
+
+      if(response.ok){
+        const updatedUser = await response.json()
+      } else {
+        console.error("Failed to update song history")
+      } 
+    } catch(error){
+      console.error("Error updating song history", error)
+    }
+  }
 
   const handleSearch = async () => {
     setSongData({ song: songName, artist: artistName });
@@ -212,6 +255,7 @@ const Dashboard = () => {
                     artist: data.artist,
                 });
                 setShowPlayer(true);
+                updateSongHistory(data.song, data.artist);
             }
             
             if(data.liked){
@@ -534,7 +578,7 @@ const Dashboard = () => {
             Your Playlists
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, idx) => (
+            {playlist.map((pl, idx) => (
               <motion.div
                 key={idx}
                 whileHover={{ scale: 1.05 }}
@@ -543,12 +587,13 @@ const Dashboard = () => {
                 <div className="w-32 h-32 bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
                   <Music className="text-gray-300 w-12 h-12" />
                 </div>
-                <h4 className="font-bold text-white">Playlist Name</h4>
-                <p className="text-gray-400 text-sm">10 Songs</p>
+                <h4 className="font-bold text-white">{pl.name}</h4>
+                <p className="text-gray-400 text-sm">{pl.songCount} Songs</p>
               </motion.div>
             ))}
           </div>
         </section>
+
 
         {showPlayer && songData && (
           <div className="bg-black p-6 fixed bottom-0 left-0 w-full z-10">

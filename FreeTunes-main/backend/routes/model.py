@@ -229,6 +229,7 @@ async def create_user(item: user, request: Request):
         
         
         item_dict = item.dict(by_alias=True)
+        item_dict["history"] = []
         result = await db["users"].insert_one(item_dict)
         print(f"Item inserted with ID: {result.inserted_id}")
         
@@ -695,3 +696,49 @@ async def update_playlist_popup(playlist_id :str, updated_data: PlaylistUpdateRe
         print(f"Error while updating playlist: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the playlist.")    
 
+
+@model_router.put("/update/history", response_model=user)
+async def update_song_history(song_data: dict, request: Request):
+    print("Received request at the endpoint")  
+    try:
+        # Extract user ID from the request token
+        print("Received song data:", song_data)
+        token = request.headers.get("authorization")
+        if not token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
+        
+        payload = verify_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+        
+        user_id = payload.get("user_id")
+        
+        # Validate song data
+        song = song_data.get('songName')
+        artist = song_data.get('artistName')
+        if not song or not artist:
+            raise HTTPException(status_code=400, detail="Invalid song data.")
+
+        # Find the user by ID
+        user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found.")
+        
+        # Update the user's history
+        history_entry = {"songName": song, "artistName": artist}
+        result = await db["users"].update_one(
+            {"_id": ObjectId(user_id)},
+            {"$push": {"history": history_entry}}  # Push the song to the history array
+        )
+
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        updated_user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        updated_user["_id"] = str(updated_user["_id"])
+
+        return updated_user
+
+    except Exception as e:
+        print(f"Error while updating song history: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while updating song history.")
