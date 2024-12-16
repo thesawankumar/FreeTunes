@@ -24,6 +24,7 @@ const Dashboard = () => {
   const [artistName, setArtistName] = useState("");
   const [songData, setSongData] = useState({ name: "", artist: "" });
 
+  const [history, setHistory] = useState([])
   const [searchQuery, setSearchQuery] = useState("");
   const [m3u8Url, setM3u8Url] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -137,6 +138,7 @@ const Dashboard = () => {
     const token = Cookies.get("access_token");
     verifyToken(token);
     fetchPlaylists()
+    fetchHistory()
   }, []);
 
   const fetchMusicRecommendations = async () => {
@@ -187,6 +189,37 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error fetching playlists:", error);
       toast.error("Failed to fetch playlists.");
+    }
+  };
+  
+  const fetchHistory = async () => {
+    const token = Cookies.get("access_token");
+    if (!token) {
+      console.error("No access token found.");
+      return;
+    }
+  
+    try {
+      const response = await fetch("http://127.0.0.1:7823/model/get/history", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token, 
+        },
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch history.");
+      }
+  
+      const data = await response.json();
+      console.log("Fetched history:", data);
+  
+      
+      setHistory(data); 
+    } catch (error) {
+      console.error("Error fetching history:", error.message);
     }
   };
   
@@ -543,7 +576,7 @@ const Dashboard = () => {
         </div>
 
         {/* Recently Played */}
-       <section className="mb-12">
+       {/* <section className="mb-12">
           <h3 className="text-2xl font-semibold text-gray-200 mb-4">
             Recently Played
           </h3>
@@ -570,7 +603,39 @@ const Dashboard = () => {
               </motion.div>
             ))}
           </div>
+        </section> */}
+        {/* Recently Played */}
+        <section className="mb-12">
+          <h3 className="text-2xl font-semibold text-gray-200 mb-4">Recently Played</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {history && history.length > 0 ? (
+              history.map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  whileHover={{ scale: 1.03 }}
+                  className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 shadow-lg rounded-xl p-4 flex items-center gap-4 transition-all"
+                >
+                  <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
+                    <Music className="text-gray-300 w-8 h-8" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-white">{item.songName || "Unknown Song"}</h4>
+                    <p className="text-gray-400 text-sm">{item.artistName || "Unknown Artist"}</p>
+                  </div>
+                  <button
+                    className="text-indigo-400 hover:text-indigo-600 transition-all"
+                    onClick={() => togglePlayPause(item)} // Pass the current item to handle playback
+                  >
+                    {isPlaying && currentSong?.id === item.id ? <Pause /> : <Play />}
+                  </button>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-gray-400">No recently played songs found.</p>
+            )}
+          </div>
         </section>
+
 
         {/* Playlists */}
         <section>

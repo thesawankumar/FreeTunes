@@ -214,7 +214,6 @@ async def verify_otp_new(request: VerifyOtpRequest, response: Response):
         print(f"Error while verifying OTP: {e}")
         raise HTTPException(status_code=500, detail={"verified":False, "message":"Internal Server Error"})
 
-
 @model_router.post("/create/user")
 async def create_user(item: user, request: Request):
     try:
@@ -742,3 +741,36 @@ async def update_song_history(song_data: dict, request: Request):
     except Exception as e:
         print(f"Error while updating song history: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating song history.")
+
+
+@model_router.get("/get/history", response_model= List[PlaylistItem])
+async def get_history(request: Request):
+    try:
+        token = request.headers.get("authorization")
+        if not token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
+        
+        payload = verify_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+        
+        user_id = payload.get("user_id")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: User ID missing in token.")
+        
+        user = await db["users"].find_one({"_id":ObjectId(user_id)})
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found.")
+        
+        history = user.get("history", [])
+
+        return [PlaylistItem(**entry) for entry in history]
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        print(f"Error while fetching song history: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching song history.")
