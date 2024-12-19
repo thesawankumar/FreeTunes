@@ -8,6 +8,7 @@ from pathlib import Path
 import os
 from routes.model import model_router
 from fastapi import APIRouter, HTTPException, Depends, Response, Request, BackgroundTasks
+from spotifyapi import recommendations
 
 app = FastAPI()
 
@@ -29,5 +30,6 @@ async def get_message(request: Request):
 
 app.mount("/static", StaticFiles(directory="hls"))
 app.include_router(router)
+app.include_router(recommendations, prefix="/recommed", tags=["Recommendations"])
 app.include_router(model_router, prefix="/model", tags=["Users"])
 from fastapi import Request

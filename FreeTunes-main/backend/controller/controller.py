@@ -3,14 +3,14 @@ import yt_dlp
 import os 
 import subprocess
 from pathlib import Path
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-from dotenv import load_dotenv
 import json
 import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 import shutil
 from datetime import datetime, timedelta
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+from dotenv import load_dotenv
 
 dotenv_path = Path('./client.env')
 load_dotenv(dotenv_path=dotenv_path)
@@ -18,6 +18,7 @@ load_dotenv(dotenv_path=dotenv_path)
 SPOTIFY_CLIENT_ID = str(os.getenv('Client_ID'))
 SPOTIFY_CLIENT_SECRET = str(os.getenv('Client_Secret'))
 sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id= SPOTIFY_CLIENT_ID,client_secret= SPOTIFY_CLIENT_SECRET))
+
 
 async def songdetails(search_query):
 
