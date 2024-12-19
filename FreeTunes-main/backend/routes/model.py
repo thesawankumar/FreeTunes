@@ -535,7 +535,6 @@ async def get_playlist(request : Request):
         print(f"Error fetching playlists: {e}")
         raise HTTPException(status_code=500, detail="Unexpected Error occured while fetching playlists")
     
-
 @model_router.post("/playlist/id")
 async def get_playlist_id(request: Request):
     try:
@@ -569,7 +568,6 @@ async def get_playlist_id(request: Request):
     except Exception as e:
         print(f"Error while fetching playlist ID: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the playlist ID.")
-
 
 @model_router.get("/playlist/{playlist_id}", response_model=playlist)
 async def get_playlist_by_id(playlist_id:str, request: Request):
@@ -695,7 +693,6 @@ async def update_playlist_popup(playlist_id :str, updated_data: PlaylistUpdateRe
         print(f"Error while updating playlist: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the playlist.")    
 
-
 @model_router.put("/update/history", response_model=user)
 async def update_song_history(song_data: dict, request: Request):
     print("Received request at the endpoint")  
@@ -741,8 +738,7 @@ async def update_song_history(song_data: dict, request: Request):
     except Exception as e:
         print(f"Error while updating song history: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while updating song history.")
-
-
+    
 @model_router.get("/get/history", response_model= List[PlaylistItem])
 async def get_history(request: Request):
     try:
@@ -774,3 +770,39 @@ async def get_history(request: Request):
     except Exception as e:
         print(f"Error while fetching song history: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching song history.")
+
+@model_router.post("/gets/playlist", response_model=playlist)
+async def get_single_playlist(request: Request) :
+    print("Request received at /gets/playlist")
+    try:
+        body = await request.json()
+        playlistName = body.get("playlistName")
+        userID = body.get("userID")
+        token = request.headers.get("authorization")
+
+        if not token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Token not found.")
+        
+        payload = verify_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
+        
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Unauthorized: User ID missing in token.")
+        
+        if user_id != userID:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only access your own playlists.")
+        
+        
+        playlist = await db["playlist"].find_one({"name": playlistName, "userID": userID})
+        
+        if not playlist:
+            print('1')
+            raise HTTPException(status_code=404, detail="Playlist not found.")
+        
+        return playlist
+    
+    except Exception as e:
+        print(f"Error while fetching playlist ID: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the playlist ID.")

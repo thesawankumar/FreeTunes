@@ -13,9 +13,10 @@ import { MdMusicNote } from 'react-icons/md';
 import Hls from "hls.js";
 import PlusPopup from "@/components/popupCard";
 import { fetchPlaylistNames } from "@/components/utils/popupCardFunctions";
-import SidebarLayout from "@/components/sidebar";
 import Sidebar from "@/components/sidebar";
 import { SidebarItem } from "@/components/sidebar";
+import SidebarExpanded, {SidebarExpandedItem} from "@/components/sidebarExpanded";
+
 
 const Dashboard = () => {
   const router = useRouter();
@@ -44,13 +45,9 @@ const Dashboard = () => {
 
   const [isPopupVisible, setIsPopupVisible] = useState(false)
   const [playlistNames, setPlaylistNames] = useState<string[] | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [playlist, setPlaylist] = useState([]);
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const [isMainContent, setIsMainContent] = useState(true);
 
   const fetchPlaylists = async () => {
     try {
@@ -94,9 +91,42 @@ const Dashboard = () => {
     setIsPopupVisible(false);
   };
 
-  const handlePlaylistSelect = (playlistName: string) => {
-    setSelectedPlaylist(playlistName)
-    console.log(`Selected Playlist: ${playlistName}`);
+  const handlePlaylistSelect = async (playlist: string) => {
+    setIsMainContent(false);
+
+    const token = Cookies.get("access_token");
+    const user = JSON.parse(localStorage.getItem("user"))
+    const userID = user?.id
+
+    try {
+      const response = await fetch('http://127.0.0.1:7823/model/gets/playlist',{
+        method: "POST", 
+        headers: {
+          "Content-Type" : "application/json",
+          "authorization" : token,
+        },
+        body: JSON.stringify({
+          playlistName : playlist.name,
+          userID : userID,
+        }),
+      })
+
+      if(response.ok){
+        const data = await response.json()
+        setSelectedPlaylist(data)
+      } else {
+        throw new Error("Failed to fetch playlists");
+      }
+      
+    } catch(error){
+      console.log(error)
+      toast.error("Failed to fetch Playlist")
+    }
+  };
+
+  const handleBackToMain = () => {
+    setSelectedPlaylist(null);
+    setIsMainContent(true); 
   };
 
   const createPlaylist = async (playlistName: string, songName: string, artistName: string) => {
@@ -196,8 +226,6 @@ const Dashboard = () => {
     }
   };
 
-
-  
   const fetchHistory = async () => {
     const token = Cookies.get("access_token");
     if (!token) {
@@ -229,7 +257,7 @@ const Dashboard = () => {
         )
       );
 
-      const topThree = uniqueData.slice(0, 3)
+      const topThree = uniqueData.slice(-3)
       
       setHistory(topThree); 
     } catch (error) {
@@ -237,7 +265,6 @@ const Dashboard = () => {
     }
   };
   
-
   const updateSongHistory = async (songName,songArtist) => {
     try {
       const token = Cookies.get("access_token")
@@ -541,207 +568,47 @@ const Dashboard = () => {
     setIsLoading(true);
   }
 
-  // return (
-  //   <div className="min-h-screen flex bg-gray-950 text-white">
-  //     <ToastContainer />
-  //     {/* Sidebar */}
-  //     <aside className="w-72 bg-gradient-to-br from-indigo-700 via-purple-800 to-purple-900 text-white p-6">
-  //       <h1 className="text-3xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-300">
-  //         FreeTunes
-  //       </h1>
-  //       <nav>
-  //         <ul className="space-y-4">
-  //           {["Home", "Playlists", "Favorites", "Settings"].map((item, idx) => (
-  //             <motion.li
-  //               key={idx}
-  //               whileHover={{ scale: 1.05, x: 5 }}
-  //               className="hover:bg-purple-600 hover:bg-opacity-30 p-3 rounded-lg transition-all cursor-pointer"
-  //             >
-  //               <a href="#">{item}</a>
-  //             </motion.li>
-  //           ))}
-  //         </ul>
-  //       </nav>
-  //     </aside>
-
-  //     {/* Main Content */}
-  //     <main className="flex-1 p-8">
-  //       <h2 className="text-4xl font-extrabold text-gray-100 mb-6">
-  //         Welcome Back!
-  //       </h2>      
-
-  //       {/* Search Bar */}
-  //       <div className="flex items-center space-x-4 mb-6">
-  //         <input
-  //           type="text"
-  //           placeholder="Song name"
-  //           value={songName}
-  //           onChange={(e) => setSongName(e.target.value)}
-  //           className="flex-grow p-4 bg-white/10 border border-white/20 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-  //         />
-  //         <input
-  //           type="text"
-  //           placeholder="Artist name"
-  //           value={artistName}
-  //           onChange={(e) => setArtistName(e.target.value)}
-  //           className="flex-grow p-4 bg-white/10 border border-white/20 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-  //         />
-  //         <button
-  //           onClick={handleSearch}
-  //           className="p-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-full hover:scale-105 transition-all"
-  //         >
-  //           <Search className="h-5 w-5" />
-  //         </button>
-  //       </div>
-
-
-
-
-  //       {/* Playlists */}
-  //       <section>
-  //         <h3 className="text-2xl font-semibold text-gray-200 mb-4">
-  //           Your Playlists
-  //         </h3>
-  //         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  //           {playlist.map((pl, idx) => (
-  //             <motion.div
-  //               key={idx}
-  //               whileHover={{ scale: 1.05 }}
-  //               className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 shadow-lg rounded-xl p-6 flex flex-col items-center transition-all"
-  //             >
-  //               <div className="w-32 h-32 bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
-  //                 <Music className="text-gray-300 w-12 h-12" />
-  //               </div>
-  //               <h4 className="font-bold text-white">{pl.name}</h4>
-  //               <p className="text-gray-400 text-sm">{pl.songCount} Songs</p>
-  //             </motion.div>
-  //           ))}
-  //         </div>
-  //       </section>
-
-
-  //       {showPlayer && songData && (
-  //         <div className="bg-black p-6 fixed bottom-0 left-0 w-full z-10">
-  //           <div className="flex justify-between items-center">
-  //             {/* Song Details and Music Icon */}
-  //             <div className="flex items-center">
-  //               <div className="w-10 h-10 bg-gray-700 flex items-center justify-center">
-  //                 <Music className="text-white w-6 h-6" />
-  //               </div>
-  //               <div className="ml-4 text-white">
-  //                 <h4 className="font-semibold text-lg">{songData.name}</h4>
-  //                 <p className="text-gray-400 text-sm">{songData.artist}</p>
-  //               </div>
-  //             </div>
-
-  //             {/* Centered Buttons Section */}
-  //             <audio
-  //               ref={audioRef}
-  //               onTimeUpdate={handleTimeUpdate}
-  //               src={m3u8Url}  // Ensure you are setting the source if needed
-  //               className="hidden" // Keep hidden unless you want to show native controls
-  //               preload="auto"
-  //             />
-
-  //             <div className="flex items-center space-x-6">
-  //               <button onClick={() => skip(-10)} className="text-white hover:text-gray-400 transition duration-200">
-  //                 <ArrowLeft className="h-8 w-8" />
-  //               </button>
-  //               <button
-  //                 onClick={togglePlayPause}
-  //                 className="text-white hover:text-gray-400 transition duration-200"
-  //                 disabled={!isHlsReady || isLoading}
-  //               >
-  //                 {isLoading ? (
-  //                   <div className="w-8 h-8 border-4 border-t-transparent border-indigo-500 rounded-full animate-spin"></div>
-  //                 ) : isHlsReady ? (
-  //                   isPlaying ? (
-  //                     <Pause className="h-8 w-8" />
-  //                   ) : (
-  //                     <Play className="h-8 w-8" />
-  //                   )
-  //                 ) : null }
-  //               </button>
-  //               <button onClick={() => skip(10)} className="text-white hover:text-gray-400 transition duration-200">
-  //                 <ArrowRight className="h-8 w-8" />
-  //               </button>
-  //             </div>
-
-  //             {/* Right Section with Liked Button */}
-  //             <div className="flex items-center space-x-6">
-  //               <button className="text-white" onClick={handleLike}>
-  //                 <FaHeart
-  //                   className={`h-6 w-6 ${isLiked ? "text-purple-600" : "text-gray-400"}`} // Apply the color conditionally
-  //                 />
-  //               </button>
-                  
-  //               <button onClick={handlePlus} className="text-white">
-  //                 <FaPlus className="h-6 w-6" />
-  //               </button>
-  //             </div>
-  //           </div>
-
-  //           {/* Progress Bar */}
-  //           <div className="mt-4 w-full bg-gray-700 rounded-full">
-  //           <div
-  //             onClick={handleSeek}
-  //             className="relative w-full h-2 bg-gray-700 rounded-full cursor-pointer"
-  //           >
-  //             <div
-  //               className="absolute top-0 left-0 h-2 bg-indigo-500 rounded-full"
-  //               style={{ width: `${(currentTime / duration) * 100}%` }}
-  //             />
-  //           </div>
-  //             {/* <div
-  //               onClick={handleSeek}
-  //               className="h-2 bg-indigo-500 rounded-full"
-  //               style={{ width: `${(currentTime / duration) * 100}%` }}
-  //             /> */}
-  //           </div>
-  //           <div className="flex justify-between text-sm mt-2 text-gray-400">
-  //             <span>{formatTime(currentTime)}</span>
-  //             <span>{formatTime(duration)}</span>
-  //           </div>
-  //         </div>
-  //       )}
-
-  //       {isPopupVisible && (
-  //         <PlusPopup 
-  //           onClose={handlePopupClose}
-  //           playlistNames={playlistNames}
-  //           onPlaylistSelect={handlePlaylistSelect}
-  //           createPlaylist={createPlaylist}
-  //           songName={songData.name}  // Pass songName here
-  //           artistName={songData.artist}
-  //         />
-  //       )}
-        
-  //     </main>
-  //   </div>
-  // );
-
 
   return (
     <div className="min-h-screen flex bg-gray-950 text-white">
       <ToastContainer />
-      {/* Sidebar */}
-      <Sidebar>
-        {playlist.map((playlist, index) => (
-          <SidebarItem
-            key={index}
-            playlist={playlist}
-            active={selectedPlaylist && selectedPlaylist.name === playlist.name}
-            onSelect={handlePlaylistSelect}
-          />
-        ))}
-      </Sidebar>
+
+      {isMainContent ? (
+        <Sidebar>
+          {playlist.map((playlist, index) => (
+            <SidebarItem
+              key={index}
+              playlist={playlist}
+              active={selectedPlaylist && selectedPlaylist.name === playlist.name}
+              onSelect={handlePlaylistSelect}
+            />
+          ))}
+        </Sidebar>
+      ) : (
+        <SidebarExpanded>
+          <li
+            onClick={handleBackToMain}
+            className="flex items-center py-3 px-4 rounded-lg cursor-pointer text-gray-400 hover:bg-gray-700 hover:text-white transition-all"
+          >
+            <ArrowLeft className="h-5 w-5 mr-3" />
+            Back to Home
+          </li>
+
+          {playlist.map((playlist, index) => (
+            <SidebarExpandedItem
+              key={index}
+              playlist={playlist}
+              active={selectedPlaylist && selectedPlaylist.name === playlist.name}
+              onSelect={handlePlaylistSelect}
+            />
+          ))}
+        </SidebarExpanded>
+      )}
   
       {/* Main Content */}
-      <main
-        className={`flex-1 p-8 transition-all duration-300 ${
-          isSidebarOpen ? "ml-80" : ""
-        }`} // Adjust margin for both open and closed states
-      >
+      <main className="flex-1 p-8 transition-all duration-300">
+        {isMainContent ? (
+          <>
         <h2 className="text-4xl font-extrabold text-gray-100 mb-6">
           Welcome Back!
         </h2>      
@@ -802,7 +669,6 @@ const Dashboard = () => {
           </div>
         </section>
 
-
         {/* Recommendations Section */}
         {/* <section className="mb-12">
           <h3 className="text-2xl font-semibold text-gray-200 mb-4">Recommendations</h3>
@@ -830,6 +696,50 @@ const Dashboard = () => {
             ))}
           </div>
         </section> */}
+          </>
+        ) : selectedPlaylist && selectedPlaylist.songs ? (
+          <>
+            <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 mb-8">
+              {selectedPlaylist.name}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {selectedPlaylist.songs.length > 0 ? (
+                selectedPlaylist.songs.map((song, idx) => (
+                  <motion.div
+                    key={idx}
+                    whileHover={{
+                      scale: 1.05,
+                      boxShadow: "0px 10px 20px rgba(255, 255, 255, 0)"
+                    }}
+                    className="relative bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 shadow-xl rounded-xl overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-gray-600/10 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+                    <div className="p-6 space-y-3">
+                      <div className="flex items-center">
+                        <Music className="text-purple-400 w-10 h-10 mr-4 group-hover:scale-110 transition-all" />
+                        <div>
+                          <h4 className="font-bold text-white text-lg">{song.songName}</h4>
+                          <p className="text-sm text-gray-400">{song.artistName}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => playSong(song.songName, song.artistName)}
+                        className="absolute bottom-4 right-4 p-3 bg-gradient-to-br from-purple-600 to-indigo-500 rounded-full text-white hover:scale-110 transition-all"
+                      >
+                        <Play className="h-6 w-6" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <p className="text-gray-400 col-span-full">No songs found in this playlist.</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="text-gray-400">Playlist not found.</p>
+        )}
+  
   
         {/* Player Section (unchanged) */}
         {showPlayer && songData && (
