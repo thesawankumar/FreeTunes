@@ -213,11 +213,19 @@ const Dashboard = () => {
         throw new Error(errorData.message || "Failed to fetch history.");
       }
   
-      const data = await response.json();
-      console.log("Fetched history:", data);
-  
+      let data = await response.json();
       
-      setHistory(data); 
+      const uniqueData = data.filter((item, index, self) =>
+        index === self.findIndex(
+          (otherItem) =>
+            otherItem.songName === item.songName &&
+            otherItem.artistName === item.artistName
+        )
+      );
+
+      const topThree = uniqueData.slice(0, 3)
+      
+      setHistory(topThree); 
     } catch (error) {
       console.error("Error fetching history:", error.message);
     }
@@ -255,7 +263,6 @@ const Dashboard = () => {
   }
 
   const handleSearch = async () => {
-    setSongData({ song: songName, artist: artistName });
     resetPlayer();
     console.log(songName);
     
@@ -522,6 +529,12 @@ const Dashboard = () => {
   };
   
 
+  const playSong = async(songN, artistN) => {
+    resetPlayer();
+    setSearchQuery(`${songN} ${artistN} song`);
+    setIsLoading(true);
+  }
+
   return (
     <div className="min-h-screen flex bg-gray-950 text-white">
       <ToastContainer />
@@ -576,35 +589,6 @@ const Dashboard = () => {
         </div>
 
         {/* Recently Played */}
-       {/* <section className="mb-12">
-          <h3 className="text-2xl font-semibold text-gray-200 mb-4">
-            Recently Played
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, idx) => (
-              <motion.div
-                key={idx}
-                whileHover={{ scale: 1.03 }}
-                className="bg-gradient-to-br from-gray-800 via-gray-900 to-gray-800 shadow-lg rounded-xl p-4 flex items-center gap-4 transition-all"
-              >
-                <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center">
-                  <Music className="text-gray-300 w-8 h-8" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-white">Song Title</h4>
-                  <p className="text-gray-400 text-sm">Artist Name</p>
-                </div>
-                <button
-                  className="text-indigo-400 hover:text-indigo-600 transition-all"
-                  onClick={togglePlayPause}
-                >
-                  {isPlaying ? <Pause /> : <Play />}
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        </section> */}
-        {/* Recently Played */}
         <section className="mb-12">
           <h3 className="text-2xl font-semibold text-gray-200 mb-4">Recently Played</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -624,9 +608,9 @@ const Dashboard = () => {
                   </div>
                   <button
                     className="text-indigo-400 hover:text-indigo-600 transition-all"
-                    onClick={() => togglePlayPause(item)} // Pass the current item to handle playback
+                    onClick={() => playSong(item.songName, item.artistName)} // Pass the current item to handle playback
                   >
-                    {isPlaying && currentSong?.id === item.id ? <Pause /> : <Play />}
+                  <Play />
                   </button>
                 </motion.div>
               ))
