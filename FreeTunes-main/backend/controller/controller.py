@@ -55,6 +55,7 @@ async def get_id(search_query):
             'quiet' : True,
             'extract_flat': True,
             'cookies' : COOKIES_DIR,
+            'verbose': True, 
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -74,7 +75,8 @@ async def search2hls(search_query: str, websocket: WebSocket):
         ydl_opts = {
             'quiet' : True,
             'extract_flat': True,
-            'cookies' : 'youtube_cookies.txt'
+            'cookies' : 'youtube_cookies.txt',
+            'verbose': True, 
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -98,6 +100,7 @@ async def search2hls(search_query: str, websocket: WebSocket):
             'outtmpl': mp3_file,
             'quiet': True,
             'cookies' : COOKIES_DIR,
+            'verbose': True, 
         }
 
         print(f"Downloading MP3 for video ID: {video_id}")
