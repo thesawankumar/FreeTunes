@@ -1,12 +1,14 @@
 import { toast } from 'react-toastify';
 
+const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
+
 export const fetchPlaylistNames = async (token: string, songName: string, artistName: string) => {
   try {
-    const response = await fetch('http://127.0.0.1:7823/model/playlist', {
+    const response = await fetch(`${serverURL}/model/playlist`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "authorization": token,
+        ...(token ? { "authorization": token } : {}),
       },
     });
 

@@ -101,8 +101,9 @@ export default function AnimatedLanding() {
     if (!searchQuery) return; 
 
     setIsLoading(true)
-
-    socketRef.current = new WebSocket("ws://127.0.0.1:7823/ws")
+    
+    const strippedUrl = new URL(serverURL).host;
+    socketRef.current = new WebSocket(`ws://${strippedUrl}/ws`)
 
     socketRef.current.onopen = () => {
       console.log("Webscoket connection established")

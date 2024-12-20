@@ -58,7 +58,7 @@ const Dashboard = () => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          authorization: token,
+          ...(token ? { "authorization": token } : {}),
         },
       });
 
@@ -105,7 +105,7 @@ const Dashboard = () => {
         method: "POST", 
         headers: {
           "Content-Type" : "application/json",
-          "authorization" : token,
+          ...(token ? { "authorization": token } : {}),
         },
         body: JSON.stringify({
           playlistName : playlist.name,
@@ -142,7 +142,7 @@ const Dashboard = () => {
         method: "POST", 
         headers: {
           "Content-Type": "application/json",
-          "authorization": token,
+          ...(token ? { "authorization": token } : {}),
         },
         body: JSON.stringify({
           name: playlistName, 
@@ -213,7 +213,7 @@ const Dashboard = () => {
       const response = await fetch(`${serverURL}/model/recommendations`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${accessToken}`,
+          ...(token ? { "authorization": token } : {}),
           "Content-Type": "application/json",
         },
       });
@@ -240,7 +240,7 @@ const Dashboard = () => {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token, 
+          ...(token ? { "Authorization": token } : {}),
         },
       });
   
@@ -282,7 +282,7 @@ const Dashboard = () => {
         method: "PUT", 
         headers: {
           "Content-Type" : "application/json",
-          "authorization" : token
+          ...(token ? { "authorization": token } : {}),
         },
         body : JSON.stringify(payload),
       })
@@ -309,7 +309,8 @@ const Dashboard = () => {
     if (searchQuery) {
       console.log(searchQuery)
         const authToken = Cookies.get('access_token')
-        socketRef.current = new WebSocket("ws://127.0.0.1:7823/ws");
+        const strippedUrl = new URL(serverURL).host;
+        socketRef.current = new WebSocket(`ws://${strippedUrl}/ws`);
 
 
         socketRef.current.onopen = () => {
@@ -539,7 +540,7 @@ const Dashboard = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": token, 
+          ...(token ? { "Authorization": token } : {}),
         },
         body: JSON.stringify(requestBody),
       });

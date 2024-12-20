@@ -18,6 +18,7 @@ export const handlePlaylistClick = (
   }
 };
 
+const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
 
 export const handleSubmit = async (
   unselectedPlaylists: string[],
@@ -38,11 +39,11 @@ export const handleSubmit = async (
   const userID = user?.id
   try {
     for (const playlistName of selectedPlaylists) {
-      const idResponse = await fetch(`http://127.0.0.1:7823/model/playlist/id`, {
+      const idResponse = await fetch(`${serverURL}/model/playlist/id`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "authorization": token,
+          ...(token ? { "authorization": token } : {}),
         },
         body: JSON.stringify({
           playlistName : playlistName,
@@ -72,11 +73,11 @@ export const handleSubmit = async (
         liked: false,
       }
 
-      const updateResponse = await fetch(`http://127.0.0.1:7823/model/update/playlist/popup/${playlistId}`, {
+      const updateResponse = await fetch(`${serverURL}/model/update/playlist/popup/${playlistId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "authorization": token,
+          ...(token ? { "authorization": token } : {}),
         },
         body: JSON.stringify(requestBody),
       });
@@ -89,11 +90,11 @@ export const handleSubmit = async (
     }
 
     for (const playlistName of unselectedPlaylists){
-      const idResponse = await fetch(`http://127.0.0.1:7823/model/playlist/id`, {
+      const idResponse = await fetch(`${serverURL}/model/playlist/id`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "authorization": token,
+          ...(token ? { "authorization": token } : {}),
         },
         body: JSON.stringify({
           playlistName : playlistName,
@@ -109,11 +110,11 @@ export const handleSubmit = async (
 
       const playlistId = await idResponse.json()
 
-      const playlistResponse = await fetch(`http://127.0.0.1:7823/model/playlist/${playlistId}`, {
+      const playlistResponse = await fetch(`${serverURL}/model/playlist/${playlistId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "authorization": token,
+          ...(token ? { "authorization": token } : {}),
         },
       });
 
@@ -144,11 +145,11 @@ export const handleSubmit = async (
       }
 
       if (songExists) {
-        const updateResponse = await fetch(`http://127.0.0.1:7823/model/update/playlist/popup/${playlistId}`, {
+        const updateResponse = await fetch(`${serverURL}/model/update/playlist/popup/${playlistId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "authorization": token,
+            ...(token ? { "authorization": token } : {}),
           },
           body: JSON.stringify(requestBody),
         });
