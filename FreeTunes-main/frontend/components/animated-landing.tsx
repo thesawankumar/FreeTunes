@@ -52,34 +52,6 @@ export default function AnimatedLanding() {
   const socketRef = useRef<WebSocket | null>(null)
   const [isHlsReady, setIsHlsReady] = useState(false);
 
-  // const verifyToken = async (token) => {
-  //   try{
-  //     const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
-  //       method : "POST", 
-  //       headers : {
-  //         "Content-Type" : "application/json"
-  //       }, 
-  //       body : JSON.stringify({access_token:token})
-  //     })
-
-  //     const data = await response.json()
-
-  //     if(response.ok && data.auth){
-  //       localStorage.setItem("user", JSON.stringify(data.user))
-  //       router.push("/dashboard")
-  //     } else {
-  //     }
-  //   } catch {
-
-  //   }
-  // }
-
-  // useEffect(()=>{
-  //     const token = Cookies.get("access_token")
-  //     if(token){
-  //       verifyToken(token)
-  //     }
-  //   }, [])
 
   const Loader = () => (
     <motion.div
@@ -376,12 +348,16 @@ export default function AnimatedLanding() {
         <div className="flex gap-6 mt-8">
             <button 
               className="flex items-center bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold px-8 py-4 rounded-full hover:scale-105 transition-all"
+              onClick={() => router.push("/login")}            
             >
               Login
+
             </button>
             <button 
               className="flex items-center bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold px-8 py-4 rounded-full hover:scale-105 transition-all"
+              onClick={() => router.push("/signup")}
             >
+            
               Sign Up
             </button>
           </div>
