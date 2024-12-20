@@ -2,6 +2,8 @@
 FreeTunes-main/server/client.env
 FreeTunes-main/backend/env
 FreeTunes-main/backend/client.env
+FreeTunes-main/frontend/.env
+FreeTunes-main/backend/.cache
 
 # Ignore node_modules directory
 FreeTunes-main/frontend/node_modules/
@@ -19,4 +21,5 @@ npm-debug.log
 yarn-debug.log
 yarn-error.log
 .next
-
+.cache
+__pycache__

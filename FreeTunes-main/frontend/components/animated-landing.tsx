@@ -34,6 +34,7 @@ const FeatureCard = ({ feature, icon: Icon, delay }) => (
 );
 
 export default function AnimatedLanding() {
+  const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -145,7 +146,7 @@ export default function AnimatedLanding() {
       const hls = new Hls();
       hlsRef.current = hls; 
       
-      const desiredUrl = `http://127.0.0.1:7823/static/${m3u8Url}`;
+      const desiredUrl = `${serverURL}/static/${m3u8Url}`;
       console.log("Loading HLS stream from:", desiredUrl);
 
       

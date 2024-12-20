@@ -10,6 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import '../../styles/toastStyles.css'
 
 export default function Login() {
+    const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState("");
@@ -20,7 +21,7 @@ export default function Login() {
 
     const verifyToken = async (token) => {
         try{
-          const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
+          const response = await fetch(`${serverURL}/model/verify/token`, {
             method : "POST", 
             headers : {
               "Content-Type" : "application/json"
@@ -53,7 +54,7 @@ export default function Login() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const response = await fetch("http://127.0.0.1:7823/model/generate/otp", {
+            const response = await fetch(`${serverURL}/model/generate/otp`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -81,7 +82,7 @@ export default function Login() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const response = await fetch("http://127.0.0.1:7823/model/verify/otp", {
+            const response = await fetch(`${serverURL}/model/verify/otp`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

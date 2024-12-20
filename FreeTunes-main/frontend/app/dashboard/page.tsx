@@ -17,8 +17,10 @@ import Sidebar from "@/components/sidebar";
 import { SidebarItem } from "@/components/sidebar";
 import SidebarExpanded, {SidebarExpandedItem} from "@/components/sidebarExpanded";
 
-
 const Dashboard = () => {
+
+  const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
+
   const router = useRouter();
   const [musicRecommendations, setMusicRecommendations] = useState([]);
   const [selectedTrack, setSelectedTrack] = useState(null);
@@ -52,7 +54,7 @@ const Dashboard = () => {
   const fetchPlaylists = async () => {
     try {
       const token = Cookies.get("access_token");
-      const response = await fetch("http://127.0.0.1:7823/model/playlist", {
+      const response = await fetch(`${serverURL}/model/playlist`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -99,7 +101,7 @@ const Dashboard = () => {
     const userID = user?.id
 
     try {
-      const response = await fetch('http://127.0.0.1:7823/model/gets/playlist',{
+      const response = await fetch(`${serverURL}/model/gets/playlist`,{
         method: "POST", 
         headers: {
           "Content-Type" : "application/json",
@@ -136,7 +138,7 @@ const Dashboard = () => {
     const user = JSON.parse(localStorage.getItem("user"));
   
     try {
-      const response = await fetch('http://127.0.0.1:7823/model/create/playlist', {
+      const response = await fetch(`${serverURL}/model/create/playlist`, {
         method: "POST", 
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +178,7 @@ const Dashboard = () => {
   
   const verifyToken = async (token) => {
     try {
-      const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
+      const response = await fetch(`${serverURL}/model/verify/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -208,7 +210,7 @@ const Dashboard = () => {
 
   const fetchMusicRecommendations = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:7823/model/recommendations", {
+      const response = await fetch(`${serverURL}/model/recommendations`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${accessToken}`,
@@ -234,7 +236,7 @@ const Dashboard = () => {
     }
   
     try {
-      const response = await fetch("http://127.0.0.1:7823/model/get/history", {
+      const response = await fetch(`${serverURL}/model/get/history`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -276,7 +278,7 @@ const Dashboard = () => {
       
       console.log('Sending request with payload:', payload); 
       
-      const response = await fetch("http://127.0.0.1:7823/model/update/history", {
+      const response = await fetch(`${serverURL}/model/update/history`, {
         method: "PUT", 
         headers: {
           "Content-Type" : "application/json",
@@ -298,7 +300,6 @@ const Dashboard = () => {
   const handleSearch = async () => {
     resetPlayer();
     console.log(songName);
-    
     
     setSearchQuery(`${songName} ${artistName} song`);
     setIsLoading(true);
@@ -377,7 +378,7 @@ const Dashboard = () => {
           const hls = new Hls();
           hlsRef.current = hls; 
           
-          const desiredUrl = `http://127.0.0.1:7823/static/${m3u8Url}`;
+          const desiredUrl = `${serverURL}/static/${m3u8Url}`;
           console.log("Loading HLS stream from:", desiredUrl);
       
             
@@ -534,7 +535,7 @@ const Dashboard = () => {
     };
   
     try {
-      const response = await fetch(`http://127.0.0.1:7823/model/update/playlist/${playlistId}`, {
+      const response = await fetch(`${serverURL}/model/update/playlist/${playlistId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

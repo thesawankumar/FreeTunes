@@ -11,6 +11,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import '../../styles/toastStyles.css'
 
 export default function SignUp() {
+  const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -22,7 +23,7 @@ export default function SignUp() {
 
   const verifyToken = async (token) => {
     try{
-      const response = await fetch("http://127.0.0.1:7823/model/verify/token", {
+      const response = await fetch(`${serverURL}/model/verify/token`, {
         method : "POST", 
         headers : {
           "Content-Type" : "application/json"
@@ -57,7 +58,7 @@ useEffect(()=>{
     setIsSubmitting(true);
 
     try{
-        const response = await fetch("http://127.0.0.1:7823/model/generate/otp", {
+        const response = await fetch(`${serverURL}/model/generate/otp`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -86,7 +87,7 @@ useEffect(()=>{
     e.preventDefault();
 
     try{
-        const response = await fetch("http://127.0.0.1:7823/model/verify/otp-new",{
+        const response = await fetch(`${serverURL}/model/verify/otp-new`,{
             method : "POST",
             headers : {
                 "Content-Type" : "application/json"
@@ -118,7 +119,7 @@ useEffect(()=>{
     setIsSubmitting(true);
 
     try{
-        const response  = await fetch("http://127.0.0.1:7823/model/create/user", {
+        const response  = await fetch(`${serverURL}/model/create/user`, {
             method: "POST",
             headers: {
                 "Content-Type" : "application/json",
