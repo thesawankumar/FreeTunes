@@ -99,6 +99,7 @@ The platform allows users to access songs from YouTube and features a backend th
 
 ### Environment Variables
 
+#### Backend
 The backend requires a `client.env` file in the `backend` directory to store sensitive information. Create a `client.env` file and add the following variables:
 
 ```plaintext
@@ -138,6 +139,22 @@ EMAIL_PASS=                 # Password for the above email account
 
 - **`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, and `EMAIL_PASS`**:
   Used for sending email notifications (e.g., password reset emails). These credentials allow the backend to send emails securely using an SMTP server.
+
+
+#### Frontend
+In the **frontend** directory, create a `.env` file and add the following variables to configure the frontend to connect to the backend:
+
+- **NEXT_PUBLIC_SERVER_URL:** URL of the backend server, typically the host and port where the backend is running. Example: `http://127.0.0.1:8000`.
+- **NEXT_PUBLIC_WSS_URL:** URL for WebSocket communication. Example: `ws://127.0.0.1:8000/ws`.
+
+**Note:** You must update these variables in the `.env` file based on the host and port the user runs the backend on. The frontend will use these URLs to send requests to the correct endpoints.
+
+Here’s the structure to maintain in the `.env` file:
+
+```bash
+NEXT_PUBLIC_SERVER_URL=http://your-backend-url
+NEXT_PUBLIC_WSS_URL=ws://your-backend-url/ws
+```
 
 
 ### Installation
