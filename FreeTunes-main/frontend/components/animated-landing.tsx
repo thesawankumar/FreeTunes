@@ -35,6 +35,7 @@ const FeatureCard = ({ feature, icon: Icon, delay }) => (
 
 export default function AnimatedLanding() {
   const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
+  const wssURL = process.env.NEXT_PUBLIC_WSS_URL
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -102,8 +103,7 @@ export default function AnimatedLanding() {
 
     setIsLoading(true)
     
-    const strippedUrl = new URL(serverURL as string).host;
-    socketRef.current = new WebSocket(`ws://${strippedUrl}/ws`)
+    socketRef.current = new WebSocket(`${wssURL}`)
 
     socketRef.current.onopen = () => {
       console.log("Webscoket connection established")

@@ -27,7 +27,8 @@ const Dashboard = () => {
 
 
   const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
-
+  const wssURL = process.env.NEXT_PUBLIC_WSS_URL
+  
   const router = useRouter();
   const [musicRecommendations, setMusicRecommendations] = useState([]);
   const [selectedTrack, setSelectedTrack] = useState(null);
@@ -326,8 +327,8 @@ const Dashboard = () => {
     if (searchQuery) {
       console.log(searchQuery)
         const authToken = Cookies.get('access_token')
-        const strippedUrl = new URL(serverURL as string).host;
-        socketRef.current = new WebSocket(`ws://${strippedUrl}/ws`);
+
+        socketRef.current = new WebSocket(`${wssURL}`);
 
 
         socketRef.current.onopen = () => {
