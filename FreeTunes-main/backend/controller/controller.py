@@ -19,7 +19,7 @@ SPOTIFY_CLIENT_ID = str(os.getenv('Client_ID'))
 SPOTIFY_CLIENT_SECRET = str(os.getenv('Client_Secret'))
 sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id= SPOTIFY_CLIENT_ID,client_secret= SPOTIFY_CLIENT_SECRET))
 
-COOKIES_DIR = 'youtube.com_cookies.txt' 
+COOKIES_DIR = 'controller/youtube.com_cookies.txt' 
 
 async def songdetails(search_query):
 
