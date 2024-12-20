@@ -1,5 +1,5 @@
 import { ChevronFirst, ChevronLast, Music } from "lucide-react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
 interface SidebarContextType {
   expanded: boolean;
@@ -7,10 +7,16 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
-export default function Sidebar({ children }) {
+interface SidebarProps {
+  children: ReactNode;
+  className?: string; // Add className prop here
+}
+
+export default function Sidebar({ children, className }: SidebarProps) {
   const [expanded, setExpanded] = useState(true);
+
   return (
-    <aside className="h-screen">
+    <aside className={`h-screen ${className}`}>
       <nav className="h-full flex flex-col bg-gradient-to-b from-gray-950/80 to-gray-800/80 text-white border-r shadow-xl transition-all duration-300 ease-in-out backdrop-blur-md">
         {/* Header (Collapse button) */}
         <div className="p-4 flex justify-between items-center">
@@ -44,6 +50,8 @@ export default function Sidebar({ children }) {
   );
 }
 
+
+
 export function SidebarItem({ playlist, active, onSelect }) {
   const context = useContext(SidebarContext);
 
@@ -53,10 +61,10 @@ export function SidebarItem({ playlist, active, onSelect }) {
   }
 
   const { expanded } = context;
-  
+
   return (
     <li
-      onClick={() => onSelect(playlist)} 
+      onClick={() => onSelect(playlist)}
       className={`flex items-center py-3 px-4 rounded-lg cursor-pointer transition-all duration-300 ease-in-out group ${
         active
           ? "bg-gradient-to-r from-indigo-600 to-purple-500 shadow-lg text-white"
@@ -84,5 +92,4 @@ export function SidebarItem({ playlist, active, onSelect }) {
     </li>
   );
 }
-
 
