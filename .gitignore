@@ -11,6 +11,7 @@ FreeTunes-main/backend/mp3
 FreeTunes-main/backend/hls
 FreeTunes-main/backend/__pycache__
 FreeTunes-main/backend/.cache
+FreeTunes-main/backend/controller/youtube.com_cookies.txt
 
 # Ignore .next build files (Next.js build output)
 FreeTunes-main/frontend/.next/

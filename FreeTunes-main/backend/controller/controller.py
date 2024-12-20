@@ -19,6 +19,7 @@ SPOTIFY_CLIENT_ID = str(os.getenv('Client_ID'))
 SPOTIFY_CLIENT_SECRET = str(os.getenv('Client_Secret'))
 sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id= SPOTIFY_CLIENT_ID,client_secret= SPOTIFY_CLIENT_SECRET))
 
+COOKIES_DIR = 'youtube.com_cookies.txt' 
 
 async def songdetails(search_query):
 
@@ -49,9 +50,11 @@ async def deletefolder(folder_path:str):
         print(f"Folder {folder_path} not found, could not delete")
 
 async def get_id(search_query):
+        
         ydl_opts = {
             'quiet' : True,
             'extract_flat': True,
+            'cookies' : COOKIES_DIR,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -71,6 +74,7 @@ async def search2hls(search_query: str, websocket: WebSocket):
         ydl_opts = {
             'quiet' : True,
             'extract_flat': True,
+            'cookies' : 'youtube_cookies.txt'
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -92,7 +96,8 @@ async def search2hls(search_query: str, websocket: WebSocket):
             'extract_audio': True,
             'audioformat': 'mp3',
             'outtmpl': mp3_file,
-            'quiet': True
+            'quiet': True,
+            'cookies' : COOKIES_DIR,
         }
 
         print(f"Downloading MP3 for video ID: {video_id}")
