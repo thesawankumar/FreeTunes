@@ -36,10 +36,6 @@
 
 <br>
 
-
-
-Here’s the updated README file that includes the correct backend setup instructions using FastAPI:
-
 ---
 
 # FreeTunes
