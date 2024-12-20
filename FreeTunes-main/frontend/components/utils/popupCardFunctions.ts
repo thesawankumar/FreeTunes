@@ -25,17 +25,17 @@ export const fetchPlaylistNames = async (token: string, songName: string, artist
         );
 
         if (songExists) {
-          selectedPlaylists.push(playlistName);
+          (selectedPlaylists as any).push(playlistName);
         } else {
-          unselectedPlaylists.push(playlistName);
+          (unselectedPlaylists as any).push(playlistName);
         }
 
         if (playlist.liked === true) {
-          const index = selectedPlaylists.indexOf(playlistName);
+          const index = (selectedPlaylists as any).indexOf(playlistName);
           if (index > -1) {
               selectedPlaylists.splice(index, 1); // Remove the playlistName if it exists
           }
-          const index2 = unselectedPlaylists.indexOf(playlistName)
+          const index2 = (unselectedPlaylists as any).indexOf(playlistName)
           if(index2 > -1){
             unselectedPlaylists.splice(index2, 1)
           }

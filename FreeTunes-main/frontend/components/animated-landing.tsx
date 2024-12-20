@@ -42,7 +42,7 @@ export default function AnimatedLanding() {
   const [isLoading, setIsLoading] = useState(false); 
   const [showPlayer, setShowPlayer] = useState(false);
   const [isPlayerVisible, setIsPlayerVisible] = useState(false)
-  const [songData, setSongData] = useState(null)
+  const [songData, setSongData] = useState<{name: string; artist: string} | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -102,7 +102,7 @@ export default function AnimatedLanding() {
 
     setIsLoading(true)
     
-    const strippedUrl = new URL(serverURL).host;
+    const strippedUrl = new URL(serverURL as string).host;
     socketRef.current = new WebSocket(`ws://${strippedUrl}/ws`)
 
     socketRef.current.onopen = () => {
@@ -131,8 +131,8 @@ export default function AnimatedLanding() {
       }
     }
       
-    socketRef.current.onerror = () => {
-      console.error("Websocket error:", error)
+    socketRef.current.onerror = (event: Event) => {
+      console.error("Websocket error:", event)
     }
 
     socketRef.current.onclose = () => {
@@ -163,22 +163,30 @@ export default function AnimatedLanding() {
       // Error handling
       hls.on(Hls.Events.ERROR, (event, data) => {
         console.error("HLS.js error:", data);
-        if (data.fatal) {
+        
+        if (typeof data.fatal === 'string' && Object.values(Hls.ErrorTypes).includes(data.fatal)) {
           switch (data.fatal) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              console.error("Network error while fetching .ts files.");
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              console.error("Error loading media.");
-              break;
-            case Hls.ErrorTypes.OTHER_ERROR:
-              console.error("Other HLS.js error.");
-              break;
-            default:
-              break;
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.error("Network error while fetching .ts files.");
+                  break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.error("Error loading media.");
+                  break;
+              case Hls.ErrorTypes.OTHER_ERROR:
+                  console.error("Other HLS.js error.");
+                  break;
+              case Hls.ErrorTypes.KEY_SYSTEM_ERROR:
+                  console.error("Key system error.");
+                  break;
+              case Hls.ErrorTypes.MUX_ERROR:
+                  console.error("Mux error.");
+                  break;
+              default:
+                  console.error("Unknown fatal error.");
+                  break;
           }
-        }
-      });
+      }
+    });
 
       return () => {
         hls.destroy(); // Cleanup HLS.js when the component is unmounted
@@ -223,7 +231,7 @@ export default function AnimatedLanding() {
 
   const handleSeek = (e: React.MouseEvent) => {
     if (!audioRef.current) return;
-    const progressBar = e.currentTarget;
+    const progressBar = e.currentTarget as HTMLElement;
     const newTime = ((e.nativeEvent.offsetX / progressBar.offsetWidth) * duration);
     audioRef.current.currentTime = newTime;
   };

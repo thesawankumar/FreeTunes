@@ -1,7 +1,11 @@
 import { ChevronFirst, ChevronLast, Music } from "lucide-react";
 import { createContext, useContext, useState } from "react";
 
-const SidebarContext = createContext();
+interface SidebarContextType {
+  expanded: boolean;
+}
+
+const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export default function Sidebar({ children }) {
   const [expanded, setExpanded] = useState(true);
@@ -41,8 +45,15 @@ export default function Sidebar({ children }) {
 }
 
 export function SidebarItem({ playlist, active, onSelect }) {
-  const { expanded } = useContext(SidebarContext);
+  const context = useContext(SidebarContext);
 
+  // Type guard to ensure context is not undefined
+  if (!context) {
+    throw new Error("SidebarContext must be used within a Sidebar");
+  }
+
+  const { expanded } = context;
+  
   return (
     <li
       onClick={() => onSelect(playlist)} 

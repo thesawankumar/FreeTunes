@@ -19,6 +19,13 @@ import SidebarExpanded, {SidebarExpandedItem} from "@/components/sidebarExpanded
 
 const Dashboard = () => {
 
+
+  interface Playlist {
+    name: string;
+    songCount: string; 
+  }
+
+
   const serverURL = process.env.NEXT_PUBLIC_SERVER_URL;
 
   const router = useRouter();
@@ -93,12 +100,15 @@ const Dashboard = () => {
     setIsPopupVisible(false);
   };
 
-  const handlePlaylistSelect = async (playlist: string) => {
+  const handlePlaylistSelect = async (nameplaylist: string) => {
     setIsMainContent(false);
 
+    console.log(nameplaylist)
+
     const token = Cookies.get("access_token");
-    const user = JSON.parse(localStorage.getItem("user"))
-    const userID = user?.id
+    const userString = localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+    const userID = user?.id;
 
     try {
       const response = await fetch(`${serverURL}/model/gets/playlist`,{
@@ -108,7 +118,7 @@ const Dashboard = () => {
           ...(token ? { "authorization": token } : {}),
         },
         body: JSON.stringify({
-          playlistName : playlist.name,
+          playlistName : nameplaylist,
           userID : userID,
         }),
       })
@@ -135,8 +145,9 @@ const Dashboard = () => {
     console.log(`Create Playlist: ${playlistName}`);
     const token = Cookies.get("access_token");
     console.log(token)
-    const user = JSON.parse(localStorage.getItem("user"));
-  
+    const userString = localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+
     try {
       const response = await fetch(`${serverURL}/model/create/playlist`, {
         method: "POST", 
@@ -158,8 +169,13 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json();
         console.log("Playlist created successfully", data);
+        const { selectedPlaylists, unselectedPlaylists } = await fetchPlaylistNames(
+          token as string,
+          songData.name as string,  
+          songData.artist as string 
+        );
 
-        const { selectedPlaylists, unselectedPlaylists } = await fetchPlaylistNames(token, songData.name, songData.artist);
+        // const { selectedPlaylists, unselectedPlaylists } = await fetchPlaylistNames(token, songData.name, songData.artist);
         const combinedPlaylists = [...selectedPlaylists, ...unselectedPlaylists];
         setPlaylistNames(combinedPlaylists);
         console.log(combinedPlaylists)
@@ -209,6 +225,7 @@ const Dashboard = () => {
   }, []);
 
   const fetchMusicRecommendations = async () => {
+    const token = Cookies.get("access_token")
     try {
       const response = await fetch(`${serverURL}/model/recommendations`, {
         method: "GET",
@@ -309,7 +326,7 @@ const Dashboard = () => {
     if (searchQuery) {
       console.log(searchQuery)
         const authToken = Cookies.get('access_token')
-        const strippedUrl = new URL(serverURL).host;
+        const strippedUrl = new URL(serverURL as string).host;
         socketRef.current = new WebSocket(`ws://${strippedUrl}/ws`);
 
 
@@ -355,8 +372,8 @@ const Dashboard = () => {
             }
         };
 
-        socketRef.current.onerror = () => {
-            console.error("Websocket error:", error);
+        socketRef.current.onerror = (event: Event) => {
+            console.error("Websocket error:", event);
         };
 
         socketRef.current.onclose = () => {
@@ -395,23 +412,31 @@ const Dashboard = () => {
       
           
           hls.on(Hls.Events.ERROR, (event, data) => {
-              console.error("HLS.js error:", data);
-              if (data.fatal) {
-                switch (data.fatal) {
+            console.error("HLS.js error:", data);
+            
+            if (typeof data.fatal === 'string' && Object.values(Hls.ErrorTypes).includes(data.fatal)) {
+              switch (data.fatal) {
                   case Hls.ErrorTypes.NETWORK_ERROR:
-                    console.error("Network error while fetching .ts files.");
-                    break;
+                      console.error("Network error while fetching .ts files.");
+                      break;
                   case Hls.ErrorTypes.MEDIA_ERROR:
-                    console.error("Error loading media.");
-                    break;
+                      console.error("Error loading media.");
+                      break;
                   case Hls.ErrorTypes.OTHER_ERROR:
-                    console.error("Other HLS.js error.");
-                    break;
+                      console.error("Other HLS.js error.");
+                      break;
+                  case Hls.ErrorTypes.KEY_SYSTEM_ERROR:
+                      console.error("Key system error.");
+                      break;
+                  case Hls.ErrorTypes.MUX_ERROR:
+                      console.error("Mux error.");
+                      break;
                   default:
-                    break;
-                }
+                      console.error("Unknown fatal error.");
+                      break;
               }
-          });
+          }
+        });
       
           return () => {
               hls.destroy();
@@ -513,7 +538,9 @@ const Dashboard = () => {
     const previousLikedState = isLiked; 
     setIsLiked(!isLiked);
     const token = Cookies.get("access_token"); 
-    const user = JSON.parse(localStorage.getItem("user")); 
+    const userString = localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+
     const playlistId = user?.playlist[0]; 
   
     if (!playlistId) {
@@ -581,8 +608,8 @@ const Dashboard = () => {
             <SidebarItem
               key={index}
               playlist={playlist}
-              active={selectedPlaylist && selectedPlaylist.name === playlist.name}
-              onSelect={handlePlaylistSelect}
+              active={selectedPlaylist && (selectedPlaylist as any).name === (playlist as any).name}
+              onSelect={() => handlePlaylistSelect((playlist as any).name)}
             />
           ))}
         </Sidebar>
@@ -600,8 +627,8 @@ const Dashboard = () => {
             <SidebarExpandedItem
               key={index}
               playlist={playlist}
-              active={selectedPlaylist && selectedPlaylist.name === playlist.name}
-              onSelect={handlePlaylistSelect}
+              active={selectedPlaylist && (selectedPlaylist as any).name === (playlist as any).name}
+              onSelect={() => handlePlaylistSelect((playlist as any).name)}
             />
           ))}
         </SidebarExpanded>
@@ -644,7 +671,7 @@ const Dashboard = () => {
           <h3 className="text-2xl font-semibold text-gray-200 mb-4">Recently Played</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {history && history.length > 0 ? (
-              history.map((item, idx) => (
+              history.map((item : any, idx) => (
                 <motion.div
                   key={idx}
                   whileHover={{ scale: 1.03 }}
@@ -699,14 +726,14 @@ const Dashboard = () => {
           </div>
         </section> */}
           </>
-        ) : selectedPlaylist && selectedPlaylist.songs ? (
+        ) : selectedPlaylist && (selectedPlaylist as any).songs ? (
           <>
             <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 mb-8">
-              {selectedPlaylist.name}
+              {(selectedPlaylist as any).name}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {selectedPlaylist.songs.length > 0 ? (
-                selectedPlaylist.songs.map((song, idx) => (
+              {(selectedPlaylist as any).songs.length > 0 ? (
+                (selectedPlaylist as any).songs.map((song, idx) => (
                   <motion.div
                     key={idx}
                     whileHover={{

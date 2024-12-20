@@ -35,8 +35,10 @@ export const handleSubmit = async (
   }
 
   const token = Cookies.get("access_token");
-  const user = JSON.parse(localStorage.getItem("user"))
-  const userID = user?.id
+  const userString = localStorage.getItem("user");
+  const user = userString ? JSON.parse(userString) : null;
+  const userID = user?.id;
+  
   try {
     for (const playlistName of selectedPlaylists) {
       const idResponse = await fetch(`${serverURL}/model/playlist/id`, {
