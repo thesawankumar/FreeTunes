@@ -10,6 +10,10 @@ from routes.model import model_router
 from fastapi import APIRouter, HTTPException, Depends, Response, Request, BackgroundTasks
 from spotifyapi import recommendations
 
+hls_directory = "hls"
+
+os.makedirs(hls_directory, exist_ok=True)
+
 app = FastAPI()
 
 app.add_middleware(
