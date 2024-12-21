@@ -31,6 +31,7 @@
     "js-cookie": "^3.0.5",
     "lucide-react": "0.105.0-alpha.4",
     "next": "^13.4.8",
+    "next-template": "file:",
     "next-themes": "^0.2.1",
     "react": "^18.2.0",
     "react-audio-player": "^0.17.0",
