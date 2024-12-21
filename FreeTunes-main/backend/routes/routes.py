@@ -11,23 +11,19 @@ async def check_if_liked(artist: str, song: str, token: str) -> bool:
     try:
         payload = verify_access_token(token)
         if not payload:
-            print('1')
             raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired token.")
 
         user_id = payload.get("user_id")
         print(user_id)
         liked_playlist = await db["playlist"].find_one({"userID": user_id, "liked": True})
         if not liked_playlist:
-            print('2')
             return False
 
         for item in liked_playlist["songs"]:
-            print('3')
             if item["songName"] == song and item["artistName"] == artist:
                 return True
         return False
     except Exception as e:
-        print('4')
         print(f"Error in checking liked song status: {e}")
         return False
 
@@ -45,8 +41,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
         search_query = await websocket.receive_text()
         updated_query = search_query[:-4]
+        
         artist, song = await songdetails(updated_query)
         print(updated_query)
+
         id = await get_id(search_query)
 
         liked_status = await check_if_liked(artist, song, token)
@@ -65,7 +63,6 @@ async def websocket_endpoint(websocket: WebSocket):
             print(hls_file_url)
 
             if hls_file_url:
-                print('check2')
                 if liked_status:
                     await websocket.send_json({
                     "hls": True,
